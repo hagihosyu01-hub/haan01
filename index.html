@@ -6369,8 +6369,14 @@ function renderAllMasters(){
   renderAnzenMaster();renderAnzenCheckArea();refreshCatDatalist();
   renderKantokuMasterTable();renderKantokuSignArea();
   renderJunkaiMemberTable();renderJunkaiPatternRows();refreshJunkaiNameSelect();
+  renderJunkaiCalendar();
   renderJimuinSelects();refreshJCompanySelect();refreshAllShikiSelects();
-  refreshShokuchoSelects();
+  refreshShokuchoSelects();refreshKoushuDatalist();
+  if(typeof renderKyPatternMaster==='function') renderKyPatternMaster();
+  if(typeof renderShikakuMaster==='function') renderShikakuMaster();
+  if(typeof renderShikakuHoyuTable==='function') renderShikakuHoyuTable();
+  // 設定値を画面に反映
+  loadSettings();
 }
 
 
@@ -8821,7 +8827,10 @@ function init(){
   // GAS URLが設定済みなら起動時にマスタ自動取得
   if(getSetting('gas-url')){
     loadMasterFromGAS().then(ok=>{
-      if(ok) renderAllMasters();
+      if(ok){
+        renderAllMasters();
+        showStatus('GASからマスタを自動取得しました ✓','ok');
+      }
     });
     // 工事一覧も取得
     loadKoujiList();
