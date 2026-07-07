@@ -976,27 +976,23 @@ textarea{resize:vertical;min-height:56px;}
   <div class="card">
     <div class="card-title">🔧 工種マスタ <button class="btn btn-blue btn-sm" onclick="syncMasterToGAS(getSetting('gas-url'))" style="margin-left:auto;font-size:11px">📤 GASへ保存</button></div>
     <p style="font-size:11px;color:var(--text2);margin-bottom:10px">既存の値は候補として表示されます。新しい値はそのまま入力して追加できます。</p>
-    <div class="master-input-row">
-      <div class="fg">
-        <label>工種</label>
+    <div class="master-input-row" style="margin-bottom:6px">
+      <div class="fg"><label>工種</label>
         <input type="text" id="k-koushu" placeholder="土工事" list="koushu-list" oninput="refreshShubetsuList()" autocomplete="off">
-        <datalist id="koushu-list"></datalist>
-      </div>
-      <div class="fg">
-        <label>種別</label>
+        <datalist id="koushu-list"></datalist></div>
+      <div class="fg"><label>種別</label>
         <input type="text" id="k-shubetsu" placeholder="掘削" list="shubetsu-list" oninput="refreshSagyouList()" autocomplete="off">
-        <datalist id="shubetsu-list"></datalist>
-      </div>
-      <div class="fg">
-        <label>作業内容</label>
+        <datalist id="shubetsu-list"></datalist></div>
+      <div class="fg"><label>作業内容</label>
         <input type="text" id="k-sagyou" placeholder="人力掘削" list="sagyou-list" autocomplete="off">
-        <datalist id="sagyou-list"></datalist>
-      </div>
-      <div class="fg" style="flex:2">
-        <label>資機材 <span style="font-size:10px;color:var(--text3);font-weight:400">（無い資機材は資機材マスタで登録）</span></label>
-        <input type="text" id="k-shiki" placeholder="下の候補をクリックまたは手入力" autocomplete="off">
-        <div id="k-shiki-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
-      </div>
+        <datalist id="sagyou-list"></datalist></div>
+    </div>
+    <div style="margin-bottom:8px">
+      <label style="font-size:12px;font-weight:500">資機材 <span style="font-size:10px;color:var(--text3);font-weight:400">（無い資機材は資機材マスタで登録）</span></label>
+      <input type="text" id="k-shiki" placeholder="下の候補をクリックまたは手入力" autocomplete="off" style="margin-top:4px">
+      <div id="k-shiki-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="btn btn-success" onclick="addKoushu()">追加</button>
     </div>
     <!-- 絞り込みフィルタ -->
