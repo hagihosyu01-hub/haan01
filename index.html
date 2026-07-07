@@ -2761,8 +2761,40 @@ async function loadMasterFromGAS(){
   }
 }
 
-function saveSetting(k,v){DB.settings[k]=v;saveDB();}
+function saveSetting(k,v){
+  DB.settings[k]=v;saveDB();
+  // GAS URLは専用キーにも保存（ファイル名が変わっても引き継ぐ）
+  if(k==='gas-url'&&v) try{localStorage.setItem('_anzen_gas_url',v);}catch(e){}
+}
 function getSetting(k,def=''){return DB.settings[k]||def;}
+
+// GAS URLの自動復元（新しいファイルでもGAS URLを引き継ぐ）
+// ★ GAS URLが決まっている場合は、下の''内にURLを貼ってください（ファイル変更時も自動接続）
+const DEFAULT_GAS_URL='';
+function restoreGasUrl(){
+  if(!getSetting('gas-url')){
+    // 1. デフォルト定数から復元
+    if(DEFAULT_GAS_URL){
+      DB.settings['gas-url']=DEFAULT_GAS_URL;
+      saveDB();
+      const inp=document.getElementById('gas-url');
+      if(inp) inp.value=DEFAULT_GAS_URL;
+      console.log('GAS URL デフォルト値を設定');
+      return;
+    }
+    // 2. 専用localStorageキーから復元
+    try{
+      const saved=localStorage.getItem('_anzen_gas_url');
+      if(saved){
+        DB.settings['gas-url']=saved;
+        saveDB();
+        const inp=document.getElementById('gas-url');
+        if(inp) inp.value=saved;
+        console.log('GAS URL自動復元:',saved.slice(0,50)+'...');
+      }
+    }catch(e){}
+  }
+}
 
 function showTab(name,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -8608,6 +8640,8 @@ function updateMonthHistoryInfo(){
 
 function init(){
   loadDB();loadSettings();
+  // GAS URLを専用キーから復元（新しいファイルでも引き継ぐ）
+  restoreGasUrl();
   loadTheme();
   updateJunkaiCompanyDisplay();
   const today=new Date().toISOString().split('T')[0];
