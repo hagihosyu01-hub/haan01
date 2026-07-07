@@ -430,10 +430,17 @@ textarea{resize:vertical;min-height:56px;}
   <div class="card">
     <div class="card-title">🚗 作業1 <span class="badge badge-green">固定</span></div>
     <div class="sagyou-block">
-      <div class="form-row">
-        <div class="fg w-third"><label>工種</label><input type="text" value="道路巡回工" readonly></div>
-        <div class="fg w-third"><label>種別</label><input type="text" value="道路巡回" readonly></div>
-        <div class="fg w-third"><label>作業内容</label><div id="s1-chiku" style="padding:5px 0;font-size:14px;font-weight:600"></div></div>
+      <div style="display:grid;grid-template-columns:2fr 2fr 2fr 1.5fr;gap:4px;margin-bottom:6px">
+        <span style="font-size:10px;color:var(--text3);padding-left:2px">工種</span>
+        <span style="font-size:10px;color:var(--text3);padding-left:2px">種別</span>
+        <span style="font-size:10px;color:var(--text3);padding-left:2px">作業内容</span>
+        <span style="font-size:10px;color:var(--text3);padding-left:2px">備考</span>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 2fr 2fr 1.5fr;gap:4px;margin-bottom:8px">
+        <input type="text" value="道路巡回工" readonly style="font-size:12px;padding:5px 6px;background:var(--bg3)">
+        <input type="text" value="道路巡回" readonly style="font-size:12px;padding:5px 6px;background:var(--bg3)">
+        <input type="text" id="s1-sagyou" value="通常巡回" style="font-size:12px;padding:5px 6px" oninput="updateJunkaiSafety()">
+        <input type="text" id="s1-chiku" readonly style="font-size:12px;padding:5px 6px;background:var(--bg3);font-weight:600">
       </div>
       <div id="s1-companies"></div>
       <!-- 作業1 固定会社名 -->
@@ -3029,9 +3036,13 @@ function stripYoubi(s){
 }
 function updateChiku(isUserChange=false){
   const d=document.getElementById('kouji-date').value;if(!d)return;
-  const ch=getChiku(d),isH=ch==='R191号',cls=isH?'chiku-hagi':'chiku-yama';
+  const ch=getChiku(d);
   const el2=document.getElementById('s1-chiku');
-  if(el2) el2.innerHTML=`<span class="chiku-badge ${cls}" style="font-size:12px;padding:2px 8px">${ch}</span>`;
+  if(el2){
+    el2.value=ch||'';
+    // 色分け
+    el2.style.color=ch==='R191号'?'#0d9488':'#d97706';
+  }
   renderS1JunkaiMembers();
   updateJunkaiSafety();
   // 打合せ簿の日付に曜日表示
@@ -7627,7 +7638,8 @@ function syncKyFromUchiawase(){
   // 作業リスト収集
   const works=[];
   // 作業1：道路巡回
-  const chiku=document.getElementById('s1-chiku')?.textContent||'';
+  const chikuEl=document.getElementById('s1-chiku');
+  const chiku=chikuEl?(chikuEl.value||chikuEl.textContent||''):'';
   const co=getSetting('junkai-company')||'協和建設工業㈱';
   // 道路巡回メンバー収集
   const s1Workers=[];
