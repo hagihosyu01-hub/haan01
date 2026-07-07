@@ -439,7 +439,7 @@ textarea{resize:vertical;min-height:56px;}
       <div style="display:grid;grid-template-columns:2fr 2fr 2fr 1.5fr;gap:4px;margin-bottom:8px">
         <input type="text" value="道路巡回工" readonly style="font-size:12px;padding:5px 6px;background:var(--bg3)">
         <input type="text" value="道路巡回" readonly style="font-size:12px;padding:5px 6px;background:var(--bg3)">
-        <input type="text" id="s1-sagyou" value="通常巡回" style="font-size:12px;padding:5px 6px" oninput="updateJunkaiSafety()">
+        <input type="text" id="s1-sagyou" value="通常巡回" style="font-size:12px;padding:5px 6px;background:var(--bg3)" oninput="updateJunkaiSafety()">
         <input type="text" id="s1-chiku" readonly style="font-size:12px;padding:5px 6px;background:var(--bg3);font-weight:600">
       </div>
       <div id="s1-companies"></div>
@@ -4336,6 +4336,9 @@ function buildSagyouHTML(id,idx){
           <label style="font-size:11px;color:var(--text2)">作業量</label>
           <input type="text" id="ryo-${id}" placeholder="例：150㎡ / 200m / 一式" style="width:160px;padding:4px 8px;font-size:12px">
         </div>
+        <label class="jisseki-radio" style="margin-left:auto" title="夜間工事の場合はON">
+          <input type="checkbox" id="yakan-${id}" onchange="onYakanChange('${id}')"><span>🌙 夜間</span>
+        </label>
       </div>
       <!-- 中止・変更の理由（状態に応じて表示） -->
       <div id="jisseki-reason-${id}" style="display:none;margin-bottom:10px">
@@ -4687,6 +4690,34 @@ function applyKotsuShiji(id){
 }
 
 // 打合せ簿の作業ブロックにパターンの指示事項を表示（AI生成の代わり）
+// ===== 夜間工事対応 =====
+const YAKAN_SHIJI=`① 照明器具を設置し、作業範囲を十分に照らすこと
+② 反射ベスト・反射材付きヘルメットを全員着用すること
+③ 規制帯・デリネーターの設置を確認し、通行車両の安全を確保すること
+④ 夜間は視認性が低下するため、合図・声掛けを確実に行うこと
+⑤ 疲労・眠気に注意し、こまめな休憩と体調確認を行うこと`;
+
+const YAKAN_KY=[
+  {kiken:'夜間で視認性が低下し、作業員同士の接触',risk:'打撲・骨折',taisaku:'反射ベスト着用・照明確保・合図の徹底',juu:'3',kaku:'3'},
+  {kiken:'照明の死角で重機と作業員の接触',risk:'重大災害',taisaku:'照明配置の確認・誘導員の配置・重機周囲の立入禁止',juu:'4',kaku:'2'},
+  {kiken:'夜間走行車両の規制帯への突入',risk:'重大災害',taisaku:'矢印板・回転灯・デリネーターの設置確認・誘導員の配置',juu:'4',kaku:'2'},
+  {kiken:'疲労・眠気による注意力低下で転倒・転落',risk:'打撲・骨折',taisaku:'こまめな休憩・体調確認・2時間ごとの交替',juu:'3',kaku:'2'}
+];
+
+function onYakanChange(id){
+  const checked=document.getElementById('yakan-'+id)?.checked||false;
+  const bar=document.getElementById('jisseki-bar-'+id);
+  if(bar){
+    bar.style.background=checked?'rgba(99,102,241,0.1)':'rgba(16,185,129,0.06)';
+    bar.style.borderColor=checked?'rgba(99,102,241,0.3)':'rgba(16,185,129,0.25)';
+  }
+  applyShijiPattern(id);
+}
+
+function isYakan(id){
+  return document.getElementById('yakan-'+id)?.checked||false;
+}
+
 function applyShijiPattern(blockId){
   const el=document.getElementById(blockId+'-ai');
   if(!el)return false;
@@ -4695,18 +4726,20 @@ function applyShijiPattern(blockId){
   if(blockId==='s1'){
     koushu='巡視・巡回工';sagyou='通常巡回';
   }else if(blockId==='s1-kotsu'||blockId.startsWith('kotsu-')){
-    return false; // 交通誘導はパターン対象外
+    return false;
   }else{
     koushu=getKoushuValFromBlock(blockId)||'';
     sagyou=getSagyouValFromBlock(blockId)||'';
   }
   if(!koushu||!sagyou)return false;
-  // パターン検索（共通＋天候）
   const patterns=findKyPatterns(koushu,sagyou,tenki);
   if(!patterns.length)return false;
-  // 指示事項をまとめて表示
   const shijis=[];
   patterns.forEach(p=>{ if(p.shiji)shijis.push(p.shiji); });
+  // 夜間の場合は夜間安全指示を追加
+  if(isYakan(blockId)){
+    shijis.push('【夜間工事】\n'+YAKAN_SHIJI);
+  }
   if(!shijis.length)return false;
   el.innerHTML=`<div style="white-space:pre-wrap;font-size:12px;line-height:1.7">${shijis.join('\n')}</div>`;
   return true;
@@ -7703,7 +7736,8 @@ function syncKyFromUchiawase(){
         });
       });
     }
-    works.push({label:`作業${i+2}`,koushu:k,shubetsu:s,sagyou:a,shiki:getShikiValues('shiki-rows-'+id).filter(Boolean).join('・'),workers,kotsuForm,kotsuWorkers});
+    const yakan=document.getElementById('yakan-'+id)?.checked||false;
+    works.push({label:`作業${i+2}`,koushu:k,shubetsu:s,sagyou:a,shiki:getShikiValues('shiki-rows-'+id).filter(Boolean).join('・'),workers,kotsuForm,kotsuWorkers,yakan});
   });
 
   // KYブロック描画（各作業タブに体調チェックも含む）
@@ -8192,8 +8226,7 @@ function applyKyPatternBlock(blockIdx){
   const w=works[blockIdx];if(!w)return false;
   const tenki=document.getElementById('tenki')?.value||'';
   const patterns=findKyPatterns(w.koushu,w.sagyou,tenki);
-  if(!patterns.length)return false;
-  // パターンの危険を「自分なりの危険予知」テーブルに反映（空のときだけ）
+  if(!patterns.length&&!w.yakan)return false;
   const tbody=document.getElementById('ky-kiken-tbody-'+blockIdx);
   if(tbody){
     let hasInput=false;
@@ -8207,6 +8240,12 @@ function applyKyPatternBlock(blockIdx){
           addKyKikenRow(blockIdx,k.kiken||'',k.taisaku||'',k.juu||'',k.kaku||'',k.risk||'');
         });
       });
+      // 夜間の場合は夜間KY危険予知を追加
+      if(w.yakan){
+        YAKAN_KY.forEach(k=>{
+          addKyKikenRow(blockIdx,k.kiken,k.taisaku,k.juu,k.kaku,k.risk);
+        });
+      }
       if(tbody.children.length===0)addKyKikenRow(blockIdx);
       syncKyKikenHidden(blockIdx);
     }
