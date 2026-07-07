@@ -1103,6 +1103,7 @@ textarea{resize:vertical;min-height:56px;}
       <div class="fg w2"><label>資機材名</label><input type="text" id="sk-name" placeholder="バックホウ"></div>
       <button class="btn btn-success" onclick="addShikiMaster()">追加</button>
       <button class="btn btn-ghost btn-sm" onclick="loadShikiPreset()" style="margin-left:8px;white-space:nowrap">📥 標準資機材を読み込む</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearAllShiki()" style="white-space:nowrap;color:var(--danger)">🗑️ 全削除</button>
     </div>
     <table class="master-table">
       <thead><tr><th>分類</th><th>資機材名</th><th>操作</th></tr></thead>
@@ -3888,7 +3889,13 @@ function loadShikiPreset(){
     added++;
   });
   saveDB();renderShikiMaster();refreshAllShikiSelects();
-  showStatus(`標準資機材：新規${added}件追加（${skipped}件は既存のためスキップ）`,'ok');
+  showStatus(`標準資機材：${added}件追加（${skipped}件は登録済みのためスキップ）`,'ok');
+}
+function clearAllShiki(){
+  if(!confirm(`資機材マスタを全て削除しますか？（${DB.shiki.length}件）`))return;
+  DB.shiki=[];
+  saveDB();renderShikiMaster();refreshAllShikiSelects();
+  showStatus('資機材マスタを全削除しました','ok');
 }
 function addShikiMaster(){
   const name=document.getElementById('sk-name').value.trim();if(!name)return;
