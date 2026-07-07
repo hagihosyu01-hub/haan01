@@ -1101,7 +1101,7 @@ textarea{resize:vertical;min-height:56px;}
       <div class="fg">
         <label>分類</label>
         <select id="sk-cat">
-          <option>材料</option><option>重機</option><option>運搬車両</option><option>転圧機械</option><option>切削・舗装機械</option><option>計測・測量</option><option>安全・保安</option><option>工具</option><option>その他</option>
+          <option>材料</option><option>重機</option><option>車両</option><option>転圧機械</option><option>切削・舗装機械</option><option>安全・保安</option><option>機械器具</option><option>その他</option>
         </select>
       </div>
       <div class="fg w2"><label>資機材名</label><input type="text" id="sk-name" placeholder="バックホウ"></div>
@@ -2369,6 +2369,7 @@ const KAGAKU_RULES=[
   {keywords:['塗装','ペンキ','区画線','ライン','塗料','ウレタン'], matchName:'ウレタン塗料'},
   {keywords:['剥離','はくり','型枠剥離'], matchName:'剥離剤'},
   {keywords:['除草','草刈','雑草'], matchName:'ラウンドアップ'},
+  {keywords:['除草','草刈','雑草'], matchName:'バスタ'},
   {keywords:['除草','草刈','雑草'], matchName:'エスプラネードライトフロアブル'},
   {keywords:['除草','草刈','雑草'], matchName:'デスティニーWDG'}
 ];
@@ -4048,26 +4049,26 @@ function updateSagyouNaiyou(id){
 }
 
 // ===== 資機材マスタ =====
-const SHIKI_CAT_ORDER=['材料','重機','運搬車両','転圧機械','切削・舗装機械','計測・測量','安全・保安','工具','その他'];
+const SHIKI_CAT_ORDER=['材料','重機','車両','転圧機械','切削・舗装機械','安全・保安','機械器具','その他'];
 
 // 標準資機材プリセット
 const SHIKI_PRESET=[
-  {cat:'工具',name:'チェンソー'},
-  {cat:'工具',name:'草刈り機'},
-  {cat:'工具',name:'鎌'},
-  {cat:'工具',name:'噴霧器（除草剤）'},
-  {cat:'工具',name:'噴霧器（除草剤）ローリータンク'},
+  {cat:'機械器具',name:'チェンソー'},
+  {cat:'機械器具',name:'草刈り機'},
+  {cat:'機械器具',name:'鎌'},
+  {cat:'機械器具',name:'噴霧器（除草剤）'},
+  {cat:'機械器具',name:'噴霧器（除草剤）ローリータンク'},
   {cat:'材料',name:'常温合材'},
   {cat:'材料',name:'As合材'},
   {cat:'材料',name:'乳剤'},
   {cat:'材料',name:'仮ラインスプレー'},
-  {cat:'運搬車両',name:'DT2t'},
-  {cat:'運搬車両',name:'DT4t'},
-  {cat:'運搬車両',name:'DT4t深'},
-  {cat:'運搬車両',name:'DT10t'},
-  {cat:'運搬車両',name:'軽トラ'},
-  {cat:'運搬車両',name:'Wキャブ1.25'},
-  {cat:'運搬車両',name:'Wキャブ1.75'},
+  {cat:'車両',name:'DT2t'},
+  {cat:'車両',name:'DT4t'},
+  {cat:'車両',name:'DT4t深'},
+  {cat:'車両',name:'DT10t'},
+  {cat:'車両',name:'軽トラ'},
+  {cat:'車両',name:'Wキャブ1.25'},
+  {cat:'車両',name:'Wキャブ1.75'},
   {cat:'重機',name:'BF0.06'},
   {cat:'重機',name:'BF0.1'},
   {cat:'重機',name:'BF0.15'},
@@ -4137,16 +4138,31 @@ function addShikiRowTo(containerId, blockId, name='', qty='1'){
   div.id=rid;
   div.style.cssText='display:flex;align-items:center;gap:4px;';
   const opts=DB.shiki.map(s=>`<option value="${s.name}">`).join('');
+  // カテゴリ判定（材料は数量・台を非表示）
+  const shikiEntry=DB.shiki.find(s=>s.name===name);
+  const isMaterial=shikiEntry&&shikiEntry.cat==='材料';
   div.innerHTML=`
     <input type="text" class="shiki-name" placeholder="資機材を入力または選択" list="${dlId}" autocomplete="off"
       value="${(name||'').replace(/"/g,'&quot;')}"
-      onblur="autoRegisterShikiValue(this.value)"
+      onblur="autoRegisterShikiValue(this.value);updateShikiQtyVisibility(this)"
       style="flex:1;padding:5px 8px;font-size:12px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text)">
     <datalist id="${dlId}">${opts}</datalist>
-    <input type="number" class="shiki-qty" min="1" max="99" value="${qty||1}" style="width:40px;padding:5px 2px;font-size:12px;text-align:center;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text)">
-    <span style="font-size:11px;color:var(--text2);white-space:nowrap">台</span>
+    <input type="number" class="shiki-qty" min="1" max="99" value="${qty||1}" style="width:40px;padding:5px 2px;font-size:12px;text-align:center;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);${isMaterial?'display:none':''}">
+    <span class="shiki-unit" style="font-size:11px;color:var(--text2);white-space:nowrap;${isMaterial?'display:none':''}">台</span>
     <button onclick="document.getElementById('${rid}').remove()" style="background:none;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:0 4px;flex-shrink:0">✕</button>`;
   container.appendChild(div);
+}
+// 資機材名変更時に数量欄の表示/非表示を切り替え
+function updateShikiQtyVisibility(inputEl){
+  const row=inputEl.closest('[id^="sk_"]');
+  if(!row)return;
+  const name=inputEl.value.trim();
+  const entry=DB.shiki.find(s=>s.name===name);
+  const isMaterial=entry&&entry.cat==='材料';
+  const qtyEl=row.querySelector('.shiki-qty');
+  const unitEl=row.querySelector('.shiki-unit');
+  if(qtyEl) qtyEl.style.display=isMaterial?'none':'';
+  if(unitEl) unitEl.style.display=isMaterial?'none':'';
 }
 
 // フォーカスが外れたとき個別に登録
@@ -4166,7 +4182,8 @@ function getShikiValues(containerId){
   const rows=[...container.querySelectorAll('[id^="sk_"]')];
   return rows.map(row=>{
     const name=(row.querySelector('.shiki-name')?.value||row.querySelector('input[type=text]')?.value||'').trim();
-    const qty=parseInt(row.querySelector('.shiki-qty')?.value)||1;
+    const qtyEl=row.querySelector('.shiki-qty');
+    const qty=qtyEl&&qtyEl.style.display!=='none'?parseInt(qtyEl.value)||1:0;
     if(!name)return '';
     return qty>1?`${name}×${qty}`:name;
   }).filter(v=>v);
