@@ -1120,8 +1120,9 @@ textarea{resize:vertical;min-height:56px;}
 <div id="sec-master-kagaku" class="section">
   <div class="card">
     <div class="card-title">⚗️ 化学物質マスタ <button class="btn btn-blue btn-sm" onclick="syncMasterToGAS(getSetting('gas-url'))" style="margin-left:auto;font-size:11px">📤 GASへ保存</button></div>
-    <div class="master-input-row">
-      <div class="fg w2"><label>化学物質名</label><input type="text" id="kg-name" placeholder="〇〇塗料・△△防錆剤"></div>
+    <div class="form-row" style="margin-bottom:6px">
+      <div class="fg w2"><label>化学物質名（製品名）</label><input type="text" id="kg-name" placeholder="バスタ液剤"></div>
+      <div class="fg"><label>製造元</label><input type="text" id="kg-maker" placeholder="BASFジャパン"></div>
       <div class="fg"><label>リスクレベル</label>
         <select id="kg-risk">
           <option value="high">高</option>
@@ -1129,9 +1130,12 @@ textarea{resize:vertical;min-height:56px;}
           <option value="low">低</option>
         </select>
       </div>
-      <button class="btn btn-success" onclick="addKagaku()">追加</button>
     </div>
-    <div class="form-row">
+    <div class="form-row" style="margin-bottom:6px">
+      <div class="fg w2"><label>有効成分・含有量</label><input type="text" id="kg-ingredient" placeholder="グルホシネート 18.5%"></div>
+      <div class="fg"><label>CAS番号</label><input type="text" id="kg-cas" placeholder="77182-82-2"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:6px">
       <div class="fg w-half"><label>危険有害性（複数選択可）</label>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px" id="kg-hazard-checks">
           <label class="worker-chip"><input type="checkbox" value="引火性"><span>引火性</span></label>
@@ -1139,7 +1143,11 @@ textarea{resize:vertical;min-height:56px;}
           <label class="worker-chip"><input type="checkbox" value="酸化性"><span>酸化性</span></label>
           <label class="worker-chip"><input type="checkbox" value="急性毒性"><span>急性毒性</span></label>
           <label class="worker-chip"><input type="checkbox" value="皮膚刺激"><span>皮膚刺激</span></label>
+          <label class="worker-chip"><input type="checkbox" value="眼損傷"><span>眼損傷</span></label>
+          <label class="worker-chip"><input type="checkbox" value="皮膚感作性"><span>皮膚感作性</span></label>
+          <label class="worker-chip"><input type="checkbox" value="生殖毒性"><span>生殖毒性</span></label>
           <label class="worker-chip"><input type="checkbox" value="吸入有害"><span>吸入有害</span></label>
+          <label class="worker-chip"><input type="checkbox" value="神経毒性"><span>神経毒性</span></label>
           <label class="worker-chip"><input type="checkbox" value="環境有害"><span>環境有害</span></label>
         </div>
       </div>
@@ -1150,15 +1158,28 @@ textarea{resize:vertical;min-height:56px;}
           <label class="worker-chip"><input type="checkbox" value="防塵マスク"><span>防塵マスク</span></label>
           <label class="worker-chip"><input type="checkbox" value="保護眼鏡"><span>保護眼鏡</span></label>
           <label class="worker-chip"><input type="checkbox" value="防護服"><span>防護服</span></label>
-          <label class="worker-chip"><input type="checkbox" value="安全靴"><span>安全靴</span></label>
+          <label class="worker-chip"><input type="checkbox" value="長靴"><span>長靴</span></label>
+          <label class="worker-chip"><input type="checkbox" value="長袖・長ズボン"><span>長袖・長ズボン</span></label>
         </div>
       </div>
     </div>
-    <div class="form-row">
-      <div class="fg w-full"><label>取扱い注意事項</label><textarea id="kg-note" placeholder="保管方法・廃棄方法・緊急時対応など" style="min-height:56px"></textarea></div>
+    <div class="form-row" style="margin-bottom:6px">
+      <div class="fg w-half"><label>応急措置（眼）</label><input type="text" id="kg-fa-eye" placeholder="流水で15分以上洗浄→眼科受診"></div>
+      <div class="fg w-half"><label>応急措置（皮膚）</label><input type="text" id="kg-fa-skin" placeholder="水と石鹸で洗浄→異常時は受診"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:6px">
+      <div class="fg w-half"><label>応急措置（吸入）</label><input type="text" id="kg-fa-inhale" placeholder="新鮮な空気の場所へ移動→受診"></div>
+      <div class="fg w-half"><label>応急措置（飲み込み）</label><input type="text" id="kg-fa-ingest" placeholder="口をすすぎ水を飲ませる→受診"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:8px">
+      <div class="fg w-full"><label>取扱い注意事項</label><textarea id="kg-note" placeholder="保管方法・使用上の注意など" style="min-height:48px"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn btn-success" onclick="addKagaku()">追加</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadKagakuPreset()">📥 標準データを読み込む</button>
     </div>
     <table class="master-table" style="margin-top:10px">
-      <thead><tr><th>化学物質名</th><th>リスク</th><th>危険有害性</th><th>必要PPE</th><th>注意事項</th><th>操作</th></tr></thead>
+      <thead><tr><th>化学物質名</th><th>製造元</th><th>成分</th><th>リスク</th><th>危険有害性</th><th>PPE</th><th>操作</th></tr></thead>
       <tbody id="kagaku-tbody"></tbody>
     </table>
   </div>
@@ -2512,14 +2533,23 @@ async function genKagakuAI(blockId, kagakuId){
 function addKagaku(){
   const name=document.getElementById('kg-name').value.trim();if(!name)return;
   const risk=document.getElementById('kg-risk').value;
+  const maker=document.getElementById('kg-maker')?.value.trim()||'';
+  const ingredient=document.getElementById('kg-ingredient')?.value.trim()||'';
+  const cas=document.getElementById('kg-cas')?.value.trim()||'';
   const note=document.getElementById('kg-note').value.trim();
   const hazards=[...document.querySelectorAll('#kg-hazard-checks input:checked')].map(c=>c.value);
   const ppe=[...document.querySelectorAll('#kg-ppe-checks input:checked')].map(c=>c.value);
-  DB.kagaku.push({id:Date.now(),name,risk,hazards,ppe,note});
+  const faEye=document.getElementById('kg-fa-eye')?.value.trim()||'';
+  const faSkin=document.getElementById('kg-fa-skin')?.value.trim()||'';
+  const faInhale=document.getElementById('kg-fa-inhale')?.value.trim()||'';
+  const faIngest=document.getElementById('kg-fa-ingest')?.value.trim()||'';
+  DB.kagaku.push({id:Date.now(),name,maker,ingredient,cas,risk,hazards,ppe,faEye,faSkin,faInhale,faIngest,note});
   saveDB();
-  document.getElementById('kg-name').value='';document.getElementById('kg-note').value='';
+  // フォームクリア
+  ['kg-name','kg-maker','kg-ingredient','kg-cas','kg-note','kg-fa-eye','kg-fa-skin','kg-fa-inhale','kg-fa-ingest'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.querySelectorAll('#kg-hazard-checks input,#kg-ppe-checks input').forEach(c=>c.checked=false);
   renderKagakuMaster();refreshKagakuSelects();
+  showStatus(`「${name}」を登録しました ✓`,'ok');
 }
 function deleteKagaku(id){
   DB.kagaku=DB.kagaku.filter(k=>k.id!==id);saveDB();renderKagakuMaster();refreshKagakuSelects();
@@ -2530,16 +2560,50 @@ function renderKagakuMaster(){
   const tbody=document.getElementById('kagaku-tbody');if(!tbody)return;
   tbody.innerHTML=DB.kagaku.map(k=>`
     <tr id="kagaku-row-${k.id}">
-      <td style="font-weight:500">${k.name}</td>
+      <td style="font-weight:500">${k.name}<br><span style="font-size:10px;color:var(--text3)">${k.cas||''}</span></td>
+      <td style="font-size:11px">${k.maker||'—'}</td>
+      <td style="font-size:11px">${k.ingredient||'—'}</td>
       <td><span class="risk-badge ${riskCls[k.risk]||'risk-mid'}">${riskMap[k.risk]||'中'}</span></td>
-      <td>${(k.hazards||[]).join('・')||'—'}</td>
-      <td>${(k.ppe||[]).join('・')||'—'}</td>
-      <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.note||'—'}</td>
+      <td style="font-size:10px">${(k.hazards||[]).join('・')||'—'}</td>
+      <td style="font-size:10px">${(k.ppe||[]).join('・')||'—'}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="editKagaku(${k.id})">編集</button>
+        <button class="btn btn-ghost btn-sm" onclick="showKagakuDetail(${k.id})">詳細</button>
         <button class="btn btn-danger btn-sm" onclick="deleteKagaku(${k.id})">削除</button>
       </td>
     </tr>`).join('');
+}
+// 化学物質の詳細表示（応急措置等）
+function showKagakuDetail(id){
+  const k=DB.kagaku.find(x=>x.id===id);if(!k)return;
+  const msg=`【${k.name}】\n製造元：${k.maker||'—'}\n有効成分：${k.ingredient||'—'}\nCAS番号：${k.cas||'—'}\nリスク：${{high:'高',mid:'中',low:'低'}[k.risk]||'中'}\n危険有害性：${(k.hazards||[]).join('・')||'—'}\n必要PPE：${(k.ppe||[]).join('・')||'—'}\n\n【応急措置】\n眼：${k.faEye||'—'}\n皮膚：${k.faSkin||'—'}\n吸入：${k.faInhale||'—'}\n飲み込み：${k.faIngest||'—'}\n\n【注意事項】\n${k.note||'—'}`;
+  alert(msg);
+}
+
+// 標準化学物質データ（プリセット）
+const KAGAKU_PRESET=[
+  {name:'バスタ液剤',maker:'BASFジャパン',ingredient:'グルホシネート 18.5%',cas:'77182-82-2',risk:'high',
+   hazards:['急性毒性','皮膚刺激','眼損傷','皮膚感作性','生殖毒性','神経毒性'],
+   ppe:['保護手袋','保護眼鏡','防毒マスク','長袖・長ズボン','長靴'],
+   faEye:'流水で15分以上洗浄→眼科受診',faSkin:'水と石鹸で洗浄→異常時は受診',
+   faInhale:'新鮮な空気の場所へ移動→受診',faIngest:'口をすすぎ水を飲ませる→受診（嘔吐させない）',
+   note:'風向きを確認し風下・強風時は散布しない。水路への流入を避ける。散布後は器具洗浄・薬剤適正保管。PRTR対象物質含有。'},
+  {name:'ラウンドアップマックスロード',maker:'日産化学',ingredient:'グリホサートカリウム塩 48%',cas:'70901-12-1',risk:'mid',
+   hazards:['皮膚刺激','眼損傷'],
+   ppe:['保護手袋','保護眼鏡','長袖・長ズボン','長靴'],
+   faEye:'流水で15分以上洗浄→眼科受診',faSkin:'水と石鹸で洗浄',
+   faInhale:'新鮮な空気の場所へ移動',faIngest:'口をすすぎ水を飲ませる→受診',
+   note:'風向きを確認し散布。水路への流入を避ける。普通物（毒劇物非該当）。'}
+];
+function loadKagakuPreset(){
+  if(!DB.kagaku)DB.kagaku=[];
+  let added=0,skipped=0;
+  KAGAKU_PRESET.forEach(p=>{
+    if(DB.kagaku.some(k=>k.name===p.name)){skipped++;return;}
+    DB.kagaku.push(Object.assign({id:Date.now()+Math.floor(Math.random()*100000)},p));
+    added++;
+  });
+  saveDB();renderKagakuMaster();refreshKagakuSelects();
+  showStatus(`標準データ：${added}件追加（${skipped}件スキップ）`,'ok');
 }
 
 function editKagaku(id){
