@@ -269,6 +269,9 @@ textarea{resize:vertical;min-height:56px;}
 .ky-kiken-table{width:100%;border-collapse:collapse;font-size:12px;}
 .ky-kiken-table th{background:var(--bg3);padding:4px 6px;border:1px solid var(--border);font-size:10px;white-space:nowrap;}
 .ky-kiken-table td{padding:3px 5px;border:1px solid var(--border);}
+.input-chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;max-height:120px;overflow-y:auto;}
+.input-chips span{padding:2px 8px;border-radius:10px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);white-space:nowrap;}
+.input-chips span:active{background:rgba(245,158,11,0.2);border-color:var(--accent);}
 .kiken-chk-label:hover{background:var(--bg2);}
 .kiken-chk-label input[type=checkbox]{width:14px;height:14px;}
 .kiken-detail{margin-top:8px;border:1px solid var(--border);border-radius:6px;padding:10px;background:var(--bg2);}
@@ -3642,6 +3645,43 @@ function quickAddKoushuFromInput(id){
 
 // input変更時の種別・作業内容候補更新
 function onKoushuInput(id){
+  refreshShubetsuListForBlock(id);
+  applyShijiPattern(id);
+  autoFillShiki(id);
+  showShubetsuChips(id);
+}
+
+// 工種チップ表示（タップで選択・iPad対応）
+function showKoushuChips(id){
+  const el=document.getElementById('ko-chips-'+id);
+  if(!el)return;
+  const list=[...new Set(DB.koushu.map(k=>k.koushu))].sort((a,b)=>koushuRank(a)-koushuRank(b)||a.localeCompare(b,'ja'));
+  el.innerHTML=list.map(k=>
+    `<span onclick="document.getElementById('ko-inp-${id}').value='${k}';onKoushuInput('${id}');this.parentElement.innerHTML='';">${k}</span>`
+  ).join('');
+}
+// 種別チップ表示
+function showShubetsuChips(id){
+  const el=document.getElementById('sh-chips-'+id);
+  if(!el)return;
+  const koushu=document.getElementById('ko-inp-'+id)?.value||'';
+  const list=[...new Set(DB.koushu.filter(k=>k.koushu===koushu).map(k=>k.shubetsu))].sort();
+  el.innerHTML=list.map(s=>
+    `<span onclick="document.getElementById('sh-inp-${id}').value='${s}';onShubetsuInput('${id}');this.parentElement.innerHTML='';">${s}</span>`
+  ).join('');
+}
+// 作業内容チップ表示
+function showSagyouChips(id){
+  const el=document.getElementById('sa-chips-'+id);
+  if(!el)return;
+  const koushu=document.getElementById('ko-inp-'+id)?.value||'';
+  const shubetsu=document.getElementById('sh-inp-'+id)?.value||'';
+  const list=[...new Set(DB.koushu.filter(k=>k.koushu===koushu&&k.shubetsu===shubetsu).map(k=>k.sagyou))].sort();
+  el.innerHTML=list.map(a=>
+    `<span onclick="document.getElementById('sa-inp-${id}').value='${a}';applyShijiPattern('${id}');autoFillShiki('${id}');this.parentElement.innerHTML='';">${a}</span>`
+  ).join('');
+}
+function refreshShubetsuListForBlock(id){
   const k=document.getElementById('ko-inp-'+id)?.value||'';
   const sList=[...new Set(DB.koushu.filter(x=>!k||x.koushu===k).map(x=>x.shubetsu))];
   const dl=document.getElementById('shubetsu-list-'+id);
@@ -4181,19 +4221,22 @@ function buildSagyouHTML(id,idx){
         <div class="fg w-third">
           <label>工種</label>
           <input type="text" id="ko-inp-${id}" placeholder="工種を入力" list="koushu-list"
-            oninput="onKoushuInput('${id}')" autocomplete="off">
+            oninput="onKoushuInput('${id}')" onfocus="showKoushuChips('${id}')" autocomplete="off">
+          <div id="ko-chips-${id}" class="input-chips"></div>
         </div>
         <div class="fg w-third">
           <label>種別</label>
           <input type="text" id="sh-inp-${id}" placeholder="種別を入力" list="shubetsu-list-${id}"
-            oninput="onShubetsuInput('${id}')" autocomplete="off">
+            oninput="onShubetsuInput('${id}')" onfocus="showShubetsuChips('${id}')" autocomplete="off">
           <datalist id="shubetsu-list-${id}"></datalist>
+          <div id="sh-chips-${id}" class="input-chips"></div>
         </div>
         <div class="fg w-third">
           <label>作業内容</label>
           <input type="text" id="sa-inp-${id}" placeholder="作業内容を入力" list="sagyou-list-${id}"
-            oninput="applyShijiPattern('${id}');autoFillShiki('${id}')" autocomplete="off">
+            oninput="applyShijiPattern('${id}');autoFillShiki('${id}')" onfocus="showSagyouChips('${id}')" autocomplete="off">
           <datalist id="sagyou-list-${id}"></datalist>
+          <div id="sa-chips-${id}" class="input-chips"></div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
