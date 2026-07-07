@@ -3716,6 +3716,43 @@ function onKoushuInput(id){
   showShubetsuChips(id);
 }
 
+// 工種行を追加（同じ作業ブロック内に複数の工種を追加）
+function addKoushuRow(blockId){
+  const container=document.getElementById('koushu-rows-'+blockId);
+  if(!container)return;
+  const rid='kr_'+Date.now();
+  const row=document.createElement('div');
+  row.className='koushu-row';
+  row.id=rid;
+  row.style.cssText='display:grid;grid-template-columns:2fr 2fr 2fr 1.5fr auto;gap:4px;margin-bottom:3px;';
+  row.innerHTML=`
+    <input type="text" class="kr-ko" placeholder="工種" list="koushu-list" autocomplete="off" style="font-size:12px;padding:5px 6px">
+    <input type="text" class="kr-sh" placeholder="種別" autocomplete="off" style="font-size:12px;padding:5px 6px">
+    <input type="text" class="kr-sa" placeholder="作業内容" autocomplete="off" style="font-size:12px;padding:5px 6px">
+    <input type="text" class="kr-biko" placeholder="備考" style="font-size:12px;padding:5px 6px">
+    <button onclick="document.getElementById('${rid}').remove()" style="background:none;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:0 4px">✕</button>`;
+  container.appendChild(row);
+}
+
+// 工種行のデータを取得（保存用）
+function getKoushuRows(blockId){
+  const container=document.getElementById('koushu-rows-'+blockId);
+  if(!container)return[];
+  const rows=[];
+  container.querySelectorAll('.koushu-row').forEach(row=>{
+    const ko=row.querySelector('[id^="ko-inp-"],.kr-ko');
+    const sh=row.querySelector('[id^="sh-inp-"],.kr-sh');
+    const sa=row.querySelector('[id^="sa-inp-"],.kr-sa');
+    const biko=row.querySelector('[id^="biko-"],.kr-biko');
+    const k=(ko?.value||'').trim();
+    const s=(sh?.value||'').trim();
+    const a=(sa?.value||'').trim();
+    const b=(biko?.value||'').trim();
+    if(k||a) rows.push({koushu:k,shubetsu:s,sagyou:a,biko:b});
+  });
+  return rows;
+}
+
 // 工種チップ表示（タップで選択・iPad対応）
 function showKoushuChips(id){
   const el=document.getElementById('ko-chips-'+id);
@@ -4297,32 +4334,35 @@ function buildSagyouHTML(id,idx){
           中止だが人員を労務集計に含める
         </label>
       </div>
-      <!-- ①工種・種別・作業内容 -->
-      <div class="form-row">
-        <div class="fg w-third">
-          <label>工種</label>
-          <input type="text" id="ko-inp-${id}" placeholder="工種を入力" list="koushu-list"
-            oninput="onKoushuInput('${id}')" onfocus="showKoushuChips('${id}')" autocomplete="off">
-          <div id="ko-chips-${id}" class="input-chips"></div>
+      <!-- ①工種・種別・作業内容（複数行対応） -->
+      <div id="koushu-rows-${id}" style="margin-bottom:6px">
+        <div style="display:grid;grid-template-columns:2fr 2fr 2fr 1.5fr auto;gap:4px;margin-bottom:2px">
+          <span style="font-size:10px;color:var(--text3);padding-left:2px">工種</span>
+          <span style="font-size:10px;color:var(--text3);padding-left:2px">種別</span>
+          <span style="font-size:10px;color:var(--text3);padding-left:2px">作業内容</span>
+          <span style="font-size:10px;color:var(--text3);padding-left:2px">備考</span>
+          <span></span>
         </div>
-        <div class="fg w-third">
-          <label>種別</label>
-          <input type="text" id="sh-inp-${id}" placeholder="種別を入力" list="shubetsu-list-${id}"
-            oninput="onShubetsuInput('${id}')" onfocus="showShubetsuChips('${id}')" autocomplete="off">
+        <div class="koushu-row" style="display:grid;grid-template-columns:2fr 2fr 2fr 1.5fr auto;gap:4px;margin-bottom:3px">
+          <input type="text" id="ko-inp-${id}" placeholder="工種" list="koushu-list"
+            oninput="onKoushuInput('${id}')" onfocus="showKoushuChips('${id}')" autocomplete="off" style="font-size:12px;padding:5px 6px">
+          <input type="text" id="sh-inp-${id}" placeholder="種別" list="shubetsu-list-${id}"
+            oninput="onShubetsuInput('${id}')" onfocus="showShubetsuChips('${id}')" autocomplete="off" style="font-size:12px;padding:5px 6px">
           <datalist id="shubetsu-list-${id}"></datalist>
-          <div id="sh-chips-${id}" class="input-chips"></div>
-        </div>
-        <div class="fg w-third">
-          <label>作業内容</label>
-          <input type="text" id="sa-inp-${id}" placeholder="作業内容を入力" list="sagyou-list-${id}"
-            oninput="applyShijiPattern('${id}');autoFillShiki('${id}')" onfocus="showSagyouChips('${id}')" autocomplete="off">
+          <input type="text" id="sa-inp-${id}" placeholder="作業内容" list="sagyou-list-${id}"
+            oninput="applyShijiPattern('${id}');autoFillShiki('${id}')" onfocus="showSagyouChips('${id}')" autocomplete="off" style="font-size:12px;padding:5px 6px">
           <datalist id="sagyou-list-${id}"></datalist>
-          <div id="sa-chips-${id}" class="input-chips"></div>
+          <input type="text" id="biko-${id}" placeholder="備考" style="font-size:12px;padding:5px 6px">
+          <span></span>
         </div>
       </div>
+      <div id="ko-chips-${id}" class="input-chips"></div>
+      <div id="sh-chips-${id}" class="input-chips"></div>
+      <div id="sa-chips-${id}" class="input-chips"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="addKoushuRow('${id}')" style="font-size:11px">＋ 工種を追加</button>
         <button class="btn btn-ghost btn-sm" onclick="quickAddKoushuFromInput('${id}')" style="font-size:11px">
-          📝 この工種・種別・作業内容をマスタに登録
+          📝 マスタに登録
         </button>
         <span id="koushu-reg-msg-${id}" style="font-size:11px;color:var(--accent2)"></span>
       </div>
@@ -4333,7 +4373,6 @@ function buildSagyouHTML(id,idx){
           <div id="shiki-rows-${id}" style="display:flex;flex-direction:column;gap:4px;margin-bottom:4px"></div>
           <button class="btn btn-ghost btn-sm" onclick="addShikiRowTo('shiki-rows-${id}','${id}')" style="font-size:11px">＋ 資機材を追加</button>
         </div>
-        <div class="fg w-half"><label>備考</label><input type="text" id="biko-${id}" placeholder="備考"></div>
       </div>
       <!-- ③会社名 -->
       <div id="co-${id}"></div>
