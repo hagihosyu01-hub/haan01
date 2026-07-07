@@ -1160,7 +1160,15 @@ textarea{resize:vertical;min-height:56px;}
 <div id="sec-settings" class="section">
   <div class="card">
     <div class="card-title">⚙️ GAS連携設定</div>
-    <div class="fg" style="margin-bottom:10px"><label>Google Apps Script WebアプリURL</label><input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/..." oninput="saveSetting('gas-url',this.value);loadKoujiList();"></div>
+    <div class="fg" style="margin-bottom:10px">
+      <label>Google Apps Script WebアプリURL</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/..." style="flex:1" oninput="saveSetting('gas-url',this.value);loadKoujiList();">
+        <button class="btn btn-ghost btn-sm" onclick="copyGasUrl()" title="URLをコピー" style="white-space:nowrap">📋コピー</button>
+        <button class="btn btn-ghost btn-sm" onclick="showGasUrlQR()" title="QRコードを表示（他の端末で読み取り）" style="white-space:nowrap">📎QR</button>
+      </div>
+      <div id="gas-url-qr" style="display:none;margin-top:8px;text-align:center;padding:12px;background:#fff;border-radius:8px;border:1px solid var(--border)"></div>
+    </div>
     <!-- マスタ同期 -->
     <div style="background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:12px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:600;color:var(--accent2);margin-bottom:6px">📡 マスタ共有（複数端末対応）</div>
@@ -2785,7 +2793,33 @@ function saveSetting(k,v){
 }
 function getSetting(k,def=''){return DB.settings[k]||def;}
 
-// GAS URLの自動復元（新しいファイルでもGAS URLを引き継ぐ）
+// GAS URLをクリップボードにコピー
+function copyGasUrl(){
+  const url=getSetting('gas-url');
+  if(!url){showStatus('GAS URLが設定されていません','err');return;}
+  navigator.clipboard.writeText(url).then(()=>{
+    showStatus('GAS URLをコピーしました ✓','ok');
+  }).catch(()=>{
+    // clipboard APIが使えない場合
+    prompt('このURLをコピーしてください：',url);
+  });
+}
+// GAS URLのQRコードを表示（Google Chart APIで生成）
+function showGasUrlQR(){
+  const url=getSetting('gas-url');
+  if(!url){showStatus('GAS URLが設定されていません','err');return;}
+  const qrDiv=document.getElementById('gas-url-qr');
+  if(!qrDiv)return;
+  if(qrDiv.style.display!=='none'){qrDiv.style.display='none';return;} // トグル
+  const qrUrl='https://chart.googleapis.com/chart?cht=qr&chs=250x250&chl='+encodeURIComponent(url);
+  qrDiv.innerHTML=`
+    <p style="font-size:12px;color:#333;margin-bottom:8px;font-weight:600">📱 他の端末でこのQRを読み取ってください</p>
+    <img src="${qrUrl}" alt="GAS URL QR" style="max-width:250px">
+    <p style="font-size:10px;color:#666;margin-top:6px;word-break:break-all">${url}</p>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('gas-url-qr').style.display='none'" style="margin-top:6px">閉じる</button>`;
+  qrDiv.style.display='block';
+}
+
 // ★ GAS URLが決まっている場合は、下の''内にURLを貼ってください（ファイル変更時も自動接続）
 const DEFAULT_GAS_URL='';
 function restoreGasUrl(){
