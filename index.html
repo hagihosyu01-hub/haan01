@@ -790,7 +790,7 @@ textarea{resize:vertical;min-height:56px;}
   <div class="card">
     <div class="card-title">👷 人員マスタ <button class="btn btn-blue btn-sm" onclick="syncMasterToGAS(getSetting('gas-url'))" style="margin-left:auto;font-size:11px">📤 GASへ保存</button>
       <div class="ml">
-        <button class="btn btn-success btn-sm" onclick="saveJimuinRoles()">💾 役職設定を保存</button>
+        <span style="font-size:11px;color:var(--text3)">役職はラジオボタンで変更すると自動保存されます</span>
       </div>
     </div>
     <!-- コピペ取り込み -->
@@ -1497,7 +1497,7 @@ function onRoleChange(labelEl){
 
 function updateRoleSelect(jimuinId, roleValue){
   const j=DB.jimuin.find(x=>x.id===jimuinId);
-  if(j) j.role=roleValue;
+  if(j){ j.role=roleValue; saveDB(); }
 }
 
 // ===== コピペ取り込み =====
