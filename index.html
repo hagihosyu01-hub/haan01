@@ -1181,14 +1181,31 @@ textarea{resize:vertical;min-height:56px;}
     <div style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="if(confirm('全データをリセットしますか？'))clearAll()">🗑️ 全データリセット</button></div>
   </div>
   <div class="card">
-    <div class="card-title">📊 累計データ補正設定</div>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">当月累計労働時間（4月〜翌3月）は保存した履歴から自動計算されます。年度初めの繰越時間がある場合のみ下記に入力してください。</p>
-    <div class="form-row">
-      <div class="fg w-half"><label>累計就労人数（補正値）</label><input type="number" id="cum-people" placeholder="0" oninput="saveSetting('cum-people',this.value);calcTotals()"></div>
-      <div class="fg w-half"><label>当月累計労働時間（繰越・補正値）</label><input type="number" id="cum-hours-manual" placeholder="0" step="0.5" oninput="saveSetting('cum-hours-manual',this.value);calcTotals()"></div>
+    <div class="card-title">📊 累計繰越設定（途中から始める場合）</div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:12px;border-left:4px solid var(--accent)">
+      <p style="font-size:12px;color:var(--text);margin:0;line-height:1.7">
+        年度の途中からこのシステムを使い始める場合、<b>以前のシステムでの累計</b>をここに入力してください。<br>
+        例：4月〜6月は別システムで管理 → 7月からこのシステムを使用<br>
+        → 6月末時点の累計人数と累計時間を入力
+      </p>
     </div>
-    <div style="margin-top:10px;padding:8px 10px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--text2)">
-      💡 今年度の履歴データ件数：<strong id="month-history-count">0</strong> 件　年度累計時間（履歴分）：<strong id="month-history-hours">0.0</strong> h
+    <div class="form-row" style="margin-bottom:8px">
+      <div class="fg w-third">
+        <label>繰越基準日</label>
+        <input type="date" id="cum-base-date" oninput="saveSetting('cum-base-date',this.value)">
+      </div>
+      <div class="fg w-third">
+        <label>繰越 累計就労人数（延べ人数）</label>
+        <input type="number" id="cum-people" placeholder="例：300" oninput="saveSetting('cum-people',this.value);calcTotals()">
+      </div>
+      <div class="fg w-third">
+        <label>繰越 累計労働時間（h）</label>
+        <input type="number" id="cum-hours-manual" placeholder="例：2400" step="0.5" oninput="saveSetting('cum-hours-manual',this.value);calcTotals()">
+      </div>
+    </div>
+    <div style="padding:8px 10px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--text2)">
+      💡 <b>計算方法</b>：累計 ＝ 繰越値 ＋ このシステムで保存した分（GASスプレッドシートから自動集計）<br>
+      　今年度の履歴データ件数：<strong id="month-history-count">0</strong> 件　年度累計時間（履歴分）：<strong id="month-history-hours">0.0</strong> h
     </div>
   </div>
 
@@ -8627,6 +8644,7 @@ function loadSettings(){
   set('kouji-start',     s['kouji-start']);
   set('cum-people',      s['cum-people']);
   set('cum-hours-manual',s['cum-hours-manual']);
+  set('cum-base-date',   s['cum-base-date']);
   set('bulk-hours',      s['bulk-hours']);
   set('ai-item-count',   s['ai-item-count']||'5');
   set('ai-style',        s['ai-style']||'normal');
