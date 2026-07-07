@@ -1102,6 +1102,7 @@ textarea{resize:vertical;min-height:56px;}
       </div>
       <div class="fg w2"><label>資機材名</label><input type="text" id="sk-name" placeholder="バックホウ"></div>
       <button class="btn btn-success" onclick="addShikiMaster()">追加</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadShikiPreset()" style="margin-left:8px;white-space:nowrap">📥 標準資機材を読み込む</button>
     </div>
     <table class="master-table">
       <thead><tr><th>分類</th><th>資機材名</th><th>操作</th></tr></thead>
@@ -3842,6 +3843,53 @@ function updateSagyouNaiyou(id){
 
 // ===== 資機材マスタ =====
 const SHIKI_CAT_ORDER=['材料','重機','運搬車両','転圧機械','切削・舗装機械','計測・測量','安全・保安','工具','その他'];
+
+// 標準資機材プリセット
+const SHIKI_PRESET=[
+  {cat:'工具',name:'チェンソー'},
+  {cat:'工具',name:'草刈り機'},
+  {cat:'工具',name:'鎌'},
+  {cat:'工具',name:'噴霧器（除草剤）'},
+  {cat:'工具',name:'噴霧器（除草剤）ローリータンク'},
+  {cat:'材料',name:'常温合材'},
+  {cat:'材料',name:'As合材'},
+  {cat:'材料',name:'乳剤'},
+  {cat:'材料',name:'仮ラインスプレー'},
+  {cat:'運搬車両',name:'DT2t'},
+  {cat:'運搬車両',name:'DT4t'},
+  {cat:'運搬車両',name:'DT4t深'},
+  {cat:'運搬車両',name:'DT10t'},
+  {cat:'運搬車両',name:'軽トラ'},
+  {cat:'運搬車両',name:'Wキャブ1.25'},
+  {cat:'運搬車両',name:'Wキャブ1.75'},
+  {cat:'重機',name:'BF0.06'},
+  {cat:'重機',name:'BF0.1'},
+  {cat:'重機',name:'BF0.15'},
+  {cat:'重機',name:'BF0.25'},
+  {cat:'重機',name:'BF0.3'},
+  {cat:'重機',name:'BF0.45'},
+  {cat:'重機',name:'BFブレーカー付'},
+  {cat:'重機',name:'高所作業車12m'},
+  {cat:'重機',name:'高所作業車17m'},
+  {cat:'切削・舗装機械',name:'Asフィニッシャー'},
+  {cat:'切削・舗装機械',name:'走行カッター'},
+  {cat:'転圧機械',name:'コンバインドローラー'},
+  {cat:'転圧機械',name:'ハンドローラ'},
+  {cat:'転圧機械',name:'タンパ'},
+  {cat:'転圧機械',name:'コンパクタ'}
+];
+
+function loadShikiPreset(){
+  if(!DB.shiki)DB.shiki=[];
+  let added=0,skipped=0;
+  SHIKI_PRESET.forEach(p=>{
+    if(DB.shiki.some(s=>s.name===p.name)){skipped++;return;}
+    DB.shiki.push({id:Date.now()+Math.floor(Math.random()*100000),name:p.name,cat:p.cat});
+    added++;
+  });
+  saveDB();renderShikiMaster();refreshAllShikiSelects();
+  showStatus(`標準資機材：新規${added}件追加（${skipped}件は既存のためスキップ）`,'ok');
+}
 function addShikiMaster(){
   const name=document.getElementById('sk-name').value.trim();if(!name)return;
   const cat=document.getElementById('sk-cat')?.value||'その他';
