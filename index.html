@@ -8149,12 +8149,21 @@ async function fetchWBGT(){
 }
 
 function weatherCodeToText(code){
-  if(code===0) return '快晴';
-  if(code<=3)  return '晴れ';
-  if(code<=48) return 'くもり';
-  if(code<=67) return '雨';
-  if(code<=77) return '雪';
-  if(code<=99) return '雷雨';
+  const c=Number(code);
+  if(c===0) return '快晴';
+  if(c===1) return '晴れ';
+  if(c===2) return '晴れ時々曇り';
+  if(c===3) return '曇り';
+  if(c>=4&&c<=48) return '曇り';           // 霧・靄
+  if(c>=51&&c<=55) return '曇り時々雨';    // 霧雨（drizzle）→ パラパラ程度
+  if(c===56||c===57) return '雨';          // 着氷性の霧雨
+  if(c===61) return '曇り時々雨';          // 小雨（slight rain）
+  if(c===63) return '雨';                  // 中程度の雨
+  if(c>=65&&c<=67) return '雨';            // 強い雨・着氷性の雨
+  if(c>=71&&c<=77) return '雪';
+  if(c>=80&&c<=82) return '曇り時々雨';    // にわか雨（rain showers）
+  if(c>=85&&c<=86) return '雪';
+  if(c>=95&&c<=99) return '雷雨';
   return '不明';
 }
 
