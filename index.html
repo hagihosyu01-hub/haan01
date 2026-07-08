@@ -406,10 +406,10 @@ textarea{resize:vertical;min-height:56px;}
       <div class="fg w2"><label>工事名</label><input type="text" id="kouji-name" value="萩保守工事"></div>
       <div class="fg w-quarter"><label>日付 <span id="kouji-date-youbi" style="font-size:13px;font-weight:700"></span></label><input type="date" id="kouji-date"></div>
       <div class="fg w-quarter"><label>天気 <span id="tenki-emoji" style="font-size:16px"></span></label>
-        <select id="tenki" onchange="updateTenkiColor()"><option value="">-- 天気を選択 --</option><option>快晴</option><option>晴れ</option><option>晴れ時々曇り</option><option>曇り時々晴れ</option><option>曇り</option><option>曇り時々雨</option><option>雨</option><option>雪</option><option>雷雨</option></select>
+        <select id="tenki" onchange="updateTenkiColor()"><option value="">📡 気象取得してください</option><option>快晴</option><option>晴れ</option><option>晴れ時々曇り</option><option>曇り時々晴れ</option><option>曇り</option><option>曇り時々雨</option><option>雨</option><option>雪</option><option>雷雨</option></select>
       </div>
-      <div class="fg w-quarter"><label>予想最高気温 (℃) <span id="kion-emoji" style="font-size:14px"></span></label><input type="number" id="kion" placeholder="34" oninput="updateHeatKyDisplay();updateKionColor()"></div>
-      <div class="fg w-quarter"><label>予想最低気温 (℃)</label><input type="number" id="kion-min" placeholder="18"></div>
+      <div class="fg w-quarter"><label>予想最高気温 (℃) <span id="kion-emoji" style="font-size:14px"></span></label><input type="number" id="kion" placeholder="📡 気象取得" oninput="updateHeatKyDisplay();updateKionColor()"></div>
+      <div class="fg w-quarter"><label>予想最低気温 (℃)</label><input type="number" id="kion-min" placeholder="📡 気象取得"></div>
       <div class="fg" style="padding-top:18px">
         <label style="font-size:10px;color:var(--text3)">🌤 気象取得</label>
         <div style="display:flex;gap:4px">
