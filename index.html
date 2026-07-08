@@ -2835,6 +2835,12 @@ async function testGASPost(){
 // マスタ保存（GASへ送信）
 async function syncMasterToGAS(gasUrl){
   if(!gasUrl){showStatus('GAS URLが設定されていません','err');return;}
+  // 空のマスタでは保存しない（スプレッドシートのデータを守る）
+  const totalItems=(DB.jimuin||[]).length+(DB.koushu||[]).length+(DB.shiki||[]).length;
+  if(totalItems===0){
+    showStatus('⚠️ マスタデータが空です。先にGASからマスタ取得してください','err');
+    return;
+  }
   const master={
     jimuin:DB.jimuin, kantokuMaster:DB.kantokuMaster,
     junkaiMaster:DB.junkaiMaster, junkaiSchedule:DB.junkaiSchedule,
@@ -4814,10 +4820,12 @@ function applyModeRestrictions(){
   const dateInput=document.getElementById('kouji-date');
   if(dateInput){
     if(isWorker){
-      dateInput.readOnly=true;
+      dateInput.disabled=true;
       dateInput.style.opacity='0.7';
+      // 今日の日付に強制
+      dateInput.value=new Date().toISOString().split('T')[0];
     }else{
-      dateInput.readOnly=false;
+      dateInput.disabled=false;
       dateInput.style.opacity='1';
     }
   }
