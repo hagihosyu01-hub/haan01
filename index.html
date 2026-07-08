@@ -239,6 +239,10 @@ textarea{resize:vertical;min-height:56px;}
 .kagaku-block{margin-top:8px;border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px;background:rgba(239,68,68,0.04);}
 .kagaku-block.hidden{display:none;}
 .kagaku-title{font-size:11px;font-weight:600;color:var(--danger);margin-bottom:10px;}
+.kagaku-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;}
+.kagaku-chk{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;background:var(--bg2);line-height:1.35;}
+.kagaku-chk input{accent-color:var(--danger);flex-shrink:0;width:16px;height:16px;}
+.kagaku-chk:has(input:checked){border-color:var(--danger);background:rgba(239,68,68,0.08);}
 .risk-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;}
 .risk-high{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.4);}
 .risk-mid{background:rgba(245,158,11,0.2);color:#fbbf24;border:1px solid rgba(245,158,11,0.4);}
@@ -2497,11 +2501,11 @@ function renderKagakuBlock(blockId){
   block.innerHTML=`
     <div class="kagaku-title">⚗️ 化学物質リスクアセスメント</div>
     <div style="margin-bottom:8px">
-      <label style="font-size:11px;color:var(--text2);font-weight:500;display:block;margin-bottom:4px">使用化学物質（複数選択可）</label>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
+      <label style="font-size:11px;color:var(--text2);font-weight:500;display:block;margin-bottom:6px">使用化学物質（複数選択可）</label>
+      <div class="kagaku-grid">
         ${DB.kagaku.map(k=>`
-          <label style="display:flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;background:var(--bg2);white-space:nowrap">
-            <input type="checkbox" class="kgchk-${blockId}" value="${k.id}" onchange="onKagakuMultiSelect('${blockId}')" ${prevSelected.includes(String(k.id))?'checked':''} style="accent-color:var(--danger);flex-shrink:0">
+          <label class="kagaku-chk">
+            <input type="checkbox" class="kgchk-${blockId}" value="${k.id}" onchange="onKagakuMultiSelect('${blockId}')" ${prevSelected.includes(String(k.id))?'checked':''}>
             ${k.name}
           </label>`).join('')}
       </div>
