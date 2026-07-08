@@ -312,6 +312,7 @@ textarea{resize:vertical;min-height:56px;}
       </select>
       <button class="btn btn-ghost btn-sm" onclick="openKoujiDialog()" style="font-size:11px">＋ 工事</button>
     </div>
+    <span id="mode-badge" onclick="showModeDialog()" style="padding:3px 10px;border-radius:12px;font-size:11px;cursor:pointer;font-weight:600;margin-right:4px"></span>
     <button id="theme-toggle" onclick="toggleTheme()">🌙 ダーク</button>
     <div class="api-wrap">
       <label>Gemini APIキー</label>
@@ -364,9 +365,9 @@ textarea{resize:vertical;min-height:56px;}
     <button class="tab-btn" onclick="showTab('anzen-junshi',this)">✅ 安全巡視点検</button>
     <button class="tab-btn" onclick="showTab('jisshi-hyo',this)">📅 月間実施表</button>
     <button class="tab-btn" onclick="showTab('help',this)">❓ 使い方</button>
-    <button class="tab-btn" onclick="showTab('settings',this)">⚙️ 設定</button>
+    <button class="tab-btn" id="tab-settings" onclick="showTab('settings',this)">⚙️ 設定</button>
   </div>
-  <div class="tab-row tab-row-2">
+  <div class="tab-row tab-row-2" id="tab-row-master">
     <span class="tab-row-label">マスタ</span>
     <button class="tab-btn" onclick="showTab('master-jimuin',this)">👷 人員</button>
     <button class="tab-btn" onclick="showTab('master-kantoku',this)">👔 監督</button>
@@ -402,7 +403,7 @@ textarea{resize:vertical;min-height:56px;}
       <div class="fg w2"><label>工事名</label><input type="text" id="kouji-name" value="萩保守工事"></div>
       <div class="fg w-quarter"><label>日付 <span id="kouji-date-youbi" style="font-size:13px;font-weight:700"></span></label><input type="date" id="kouji-date"></div>
       <div class="fg w-quarter"><label>天気 <span id="tenki-emoji" style="font-size:16px"></span></label>
-        <select id="tenki" onchange="updateTenkiColor()"><option>快晴</option><option>晴れ</option><option>晴れ時々曇り</option><option>曇り時々晴れ</option><option>曇り</option><option>曇り時々雨</option><option>雨</option><option>雪</option><option>雷雨</option></select>
+        <select id="tenki" onchange="updateTenkiColor()"><option value="">-- 天気を選択 --</option><option>快晴</option><option>晴れ</option><option>晴れ時々曇り</option><option>曇り時々晴れ</option><option>曇り</option><option>曇り時々雨</option><option>雨</option><option>雪</option><option>雷雨</option></select>
       </div>
       <div class="fg w-quarter"><label>予想最高気温 (℃) <span id="kion-emoji" style="font-size:14px"></span></label><input type="number" id="kion" placeholder="34" oninput="updateHeatKyDisplay();updateKionColor()"></div>
       <div class="fg w-quarter"><label>予想最低気温 (℃)</label><input type="number" id="kion-min" placeholder="18"></div>
@@ -4690,7 +4691,69 @@ function applyKotsuShiji(id){
 }
 
 // 打合せ簿の作業ブロックにパターンの指示事項を表示（AI生成の代わり）
-// ===== 夜間工事対応 =====
+// ===== モード管理（管理者/作業員） =====
+const ADMIN_PASS='1739';
+let currentMode=localStorage.getItem('_anzen_mode')||'';
+
+function showModeDialog(){
+  document.getElementById('mode-dialog').style.display='flex';
+}
+
+function selectMode(mode){
+  if(mode==='admin'){
+    const pw=prompt('管理者パスワードを入力してください');
+    if(pw!==ADMIN_PASS){
+      if(pw!==null) alert('パスワードが違います');
+      return;
+    }
+  }
+  currentMode=mode;
+  localStorage.setItem('_anzen_mode',mode);
+  document.getElementById('mode-dialog').style.display='none';
+  applyModeRestrictions();
+  showStatus(mode==='admin'?'🔑 管理者モード':'👷 作業員モード','ok');
+}
+
+function applyModeRestrictions(){
+  const isWorker=currentMode==='worker';
+  const badge=document.getElementById('mode-badge');
+  if(badge){
+    badge.textContent=isWorker?'👷 作業員':'🔑 管理者';
+    badge.style.background=isWorker?'rgba(245,158,11,0.15)':'rgba(13,148,136,0.15)';
+    badge.style.color=isWorker?'#b45309':'#0d9488';
+  }
+
+  // マスタタブ行を非表示
+  const masterRow=document.getElementById('tab-row-master');
+  if(masterRow) masterRow.style.display=isWorker?'none':'';
+
+  // 設定タブを非表示
+  const settingsTab=document.getElementById('tab-settings');
+  if(settingsTab) settingsTab.style.display=isWorker?'none':'';
+
+  // 日付変更を制限（作業員モードは今日固定）
+  const dateInput=document.getElementById('kouji-date');
+  if(dateInput){
+    if(isWorker){
+      dateInput.readOnly=true;
+      dateInput.style.opacity='0.7';
+    }else{
+      dateInput.readOnly=false;
+      dateInput.style.opacity='1';
+    }
+  }
+
+  // 日付またぎボタン（引き継ぎ・白紙等）を非表示
+  document.querySelectorAll('[onclick*="loadFromDate"],[onclick*="clearUchiawase"]').forEach(el=>{
+    el.style.display=isWorker?'none':'';
+  });
+
+  // GASへ保存ボタン（マスタ保存）を非表示
+  document.querySelectorAll('[onclick*="syncMasterToGAS"]').forEach(el=>{
+    el.style.display=isWorker?'none':'';
+  });
+}
+
 const YAKAN_SHIJI=`① 照明器具を設置し、作業範囲を十分に照らすこと
 ② 反射ベスト・反射材付きヘルメットを全員着用すること
 ③ 規制帯・デリネーターの設置を確認し、通行車両の安全を確保すること
@@ -7542,7 +7605,24 @@ function updateHeatKyDisplay(){
 // 熱中症指示を連絡事項に追記（自動判定版）
 function addHeatAIToRenraku(){
   const wbgt=(window._currentWbgt!==undefined&&window._currentWbgt!==null)?window._currentWbgt:'';
-  const kion=document.getElementById('kion')?.value||'';
+  let kion=document.getElementById('kion')?.value||'';
+  // 気温が空の場合、予想最高気温から取得を試みる
+  if(!kion&&wbgt===''){
+    // 天気予報を自動取得して気温を設定
+    const kionMin=document.getElementById('kion-min')?.value||'';
+    if(!kion&&!kionMin){
+      // 気温もWBGTもない場合は予報取得を案内
+      if(confirm('気温が未入力です。天気予報から気温を取得しますか？')){
+        fetchWeatherToUchiawase().then(()=>{
+          setTimeout(()=>addHeatAIToRenraku(),500);
+        });
+        return;
+      }
+      showStatus('気温を入力するか天気予報を取得してください','err');
+      return;
+    }
+  }
+  kion=document.getElementById('kion')?.value||'';
   const text=buildHeatGuidanceText(wbgt, kion);
   if(!text){showStatus('気温またはWBGTを取得してください','err');return;}
   const renraku=document.getElementById('renraku');
@@ -7757,14 +7837,38 @@ function renderKySagyouBlocks(works){
     return;
   }
 
-  // タブボタンは非表示（全作業を縦に並べるため）
+  // ===== 既存データを退避（サイン・KY危険予知・交通誘導） =====
+  const prevWorks=window._kyWorks||[];
+  const savedSigns={};   // {blockIdx-workerKey: dataURL}
+  const savedKiken={};   // {blockIdx: JSON}
+  const savedKotsuKiken={}; // {blockIdx: JSON}
+  const savedKotsuSigns={}; // {blockIdx: dataURL}
+  prevWorks.forEach((pw,pi)=>{
+    // サインを退避
+    (pw.workers||[]).forEach(name=>{
+      const key=name.replace(/\s/g,'_');
+      const c=document.getElementById('ky-sign-'+pi+'-'+key);
+      if(c&&!isCanvasBlank(c)) savedSigns[pw.label+'-'+key]=c.toDataURL();
+    });
+    // KY危険予知を退避
+    syncKyKikenHidden(pi);
+    const hidden=document.getElementById('ky-tegaki-'+pi);
+    if(hidden&&hidden.value&&hidden.value!=='[]') savedKiken[pw.label]=hidden.value;
+    // 交通誘導KYを退避
+    if(typeof syncKotsuKyHidden==='function') syncKotsuKyHidden(pi);
+    const kotsuHidden=document.getElementById('kotsu-ky-hidden-'+pi);
+    if(kotsuHidden&&kotsuHidden.value&&kotsuHidden.value!=='[]') savedKotsuKiken[pw.label]=kotsuHidden.value;
+    // 交通誘導サインを退避
+    const kc=document.getElementById('kotsu-sign-'+pi);
+    if(kc&&!isCanvasBlank(kc)) savedKotsuSigns[pw.label]=kc.toDataURL();
+  });
+
   btnArea.innerHTML='';
 
-  // 各作業ブロックを全て表示（display:noneにしない）
+  // 各作業ブロックを全て表示
   area.innerHTML=works.map((w,i)=>`
     <div id="ky-sagyou-tab-${i}" style="margin-bottom:16px;border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--bg2)">
       <div style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--accent)">🔨 ${w.label}　${w.koushu||''}${w.sagyou?' / '+w.sagyou:''}</div>
-      <!-- AI危険予知 -->
       ${buildKySagyouBlockInner(w,i)}
     </div>`).join('');
 
@@ -7773,7 +7877,6 @@ function renderKySagyouBlocks(works){
     w.workers.forEach(name=>{
       setTimeout(()=>initCanvas(`ky-sign-${i}-${name.replace(/\s/g,'_')}`),100);
     });
-    // 危険予知テーブルに初期行（空なら1行）
     setTimeout(()=>{
       const tbody=document.getElementById('ky-kiken-tbody-'+i);
       if(tbody&&tbody.children.length===0) addKyKikenRow(i);
@@ -7782,9 +7885,49 @@ function renderKySagyouBlocks(works){
 
   window._kyWorks=works;
 
-  // 保存済みのKY AI・自分なりの危険予知を復元
-  if(window._savedKyBlocks&&window._savedKyBlocks.length){
-    // 交通誘導のKYを_savedKotsuKyに展開
+  // ===== 退避したデータを復元（キャンバス初期化後に確実に） =====
+  setTimeout(()=>{
+    works.forEach((w,i)=>{
+      // KY危険予知を復元
+      if(savedKiken[w.label]){
+        restoreKyKikenTable(i,savedKiken[w.label]);
+      }
+      // サインを復元（キャンバス初期化完了後）
+      (w.workers||[]).forEach(name=>{
+        const key=name.replace(/\s/g,'_');
+        const dataUrl=savedSigns[w.label+'-'+key];
+        if(dataUrl){
+          setTimeout(()=>{
+            const c=document.getElementById('ky-sign-'+i+'-'+key);
+            if(c){
+              const img=new Image();
+              img.onload=()=>{const ctx=c.getContext('2d');ctx.drawImage(img,0,0);c.classList.add('signed');};
+              img.src=dataUrl;
+            }
+          },100);
+        }
+      });
+      // 交通誘導KYを復元
+      if(savedKotsuKiken[w.label]){
+        if(!window._savedKotsuKy)window._savedKotsuKy={};
+        window._savedKotsuKy[i]=savedKotsuKiken[w.label];
+      }
+      // 交通誘導サインを復元
+      if(savedKotsuSigns[w.label]){
+        setTimeout(()=>{
+          const kc=document.getElementById('kotsu-sign-'+i);
+          if(kc){
+            const img=new Image();
+            img.onload=()=>{const ctx=kc.getContext('2d');ctx.drawImage(img,0,0);};
+            img.src=savedKotsuSigns[w.label];
+          }
+        },200);
+      }
+    });
+  },300);
+
+  // GAS保存済みのKYデータも復元（初回引き継ぎ時）
+  if(window._savedKyBlocks&&window._savedKyBlocks.length&&prevWorks.length===0){
     if(!window._savedKotsuKy)window._savedKotsuKy={};
     works.forEach((w,i)=>{
       const kotsuBlock=window._savedKyBlocks.find(b=>b.work===w.label+' 交通誘導');
@@ -9008,7 +9151,25 @@ function init(){
   }
 }
 init();
+// モード選択（初回はダイアログ表示、2回目以降は保存済みモードを適用）
+if(currentMode){
+  applyModeRestrictions();
+}else{
+  showModeDialog();
+}
 </script>
+<!-- モード選択ダイアログ -->
+<div id="mode-dialog" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:30px;max-width:360px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:24px;margin-bottom:6px">🏗️</div>
+    <div style="font-size:18px;font-weight:700;color:#1c1917;margin-bottom:4px">工事安全管理システム</div>
+    <div style="font-size:12px;color:#78716c;margin-bottom:20px">使用モードを選択してください</div>
+    <button onclick="selectMode('admin')" style="display:block;width:100%;padding:14px;margin-bottom:10px;border-radius:10px;border:2px solid #0d9488;background:rgba(13,148,136,0.08);color:#0d9488;font-size:15px;font-weight:600;cursor:pointer">🔑 管理者モード<br><span style="font-size:11px;font-weight:400">マスタ編集・日付変更・全機能</span></button>
+    <button onclick="selectMode('worker')" style="display:block;width:100%;padding:14px;border-radius:10px;border:2px solid #f59e0b;background:rgba(245,158,11,0.08);color:#b45309;font-size:15px;font-weight:600;cursor:pointer">👷 作業員モード<br><span style="font-size:11px;font-weight:400">当日の打合せ簿・KY・安全巡視</span></button>
+    <div style="margin-top:12px;font-size:10px;color:#a8a29e">モードはいつでも変更できます（ヘッダーのモード表示をタップ）</div>
+  </div>
+</div>
+
 <!-- トップへ戻るボタン -->
 <button id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="トップへ戻る"
   style="position:fixed;right:20px;bottom:20px;width:48px;height:48px;border-radius:50%;border:none;
