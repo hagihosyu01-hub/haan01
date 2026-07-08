@@ -2859,13 +2859,52 @@ async function loadMasterFromGAS(){
       const v=m[k];
       return k+':'+(Array.isArray(v)?v.length+'件':typeof v==='object'?Object.keys(v).length+'keys':v);
     }).join(', '));
-    if(m.jimuin&&m.jimuin.length) DB.jimuin=m.jimuin;
-    if(m.kantokuMaster&&m.kantokuMaster.length) DB.kantokuMaster=m.kantokuMaster;
-    if(m.junkaiMaster&&m.junkaiMaster.length) DB.junkaiMaster=m.junkaiMaster;
-    if(m.junkaiSchedule&&Object.keys(m.junkaiSchedule).length) DB.junkaiSchedule=m.junkaiSchedule;
-    if(m.companies&&m.companies.length) DB.companies=m.companies;
-    if(m.koushu&&m.koushu.length) DB.koushu=m.koushu;
-    if(m.shiki&&m.shiki.length) DB.shiki=m.shiki;
+    if(m.jimuin&&m.jimuin.length){
+      // han, idを文字列に正規化
+      m.jimuin.forEach(j=>{
+        if(j.han!==undefined&&j.han!==null&&j.han!=='') j.han=String(j.han);
+        if(j.id) j.id=Number(j.id);
+      });
+      DB.jimuin=m.jimuin;
+    }
+    if(m.kantokuMaster&&m.kantokuMaster.length){
+      m.kantokuMaster.forEach(k=>{if(k.id)k.id=Number(k.id);});
+      DB.kantokuMaster=m.kantokuMaster;
+    }
+    if(m.junkaiMaster&&m.junkaiMaster.length){
+      m.junkaiMaster.forEach(j=>{if(j.id)j.id=Number(j.id);});
+      DB.junkaiMaster=m.junkaiMaster;
+    }
+    if(m.junkaiSchedule&&Object.keys(m.junkaiSchedule).length){
+      // 日付キーをyyyy-MM-dd形式に正規化
+      const normalized={};
+      Object.keys(m.junkaiSchedule).forEach(key=>{
+        let dateStr=key;
+        // Date文字列（Mon Apr 01 2026等）をyyyy-MM-ddに変換
+        if(dateStr.match(/^[A-Z][a-z]{2}\s/)){
+          const d=new Date(dateStr);
+          if(!isNaN(d)) dateStr=d.toISOString().split('T')[0];
+        }
+        // スプレッドシートの日付形式の変換
+        if(dateStr.match(/^\d{4}\/\d{1,2}\/\d{1,2}/)){
+          dateStr=dateStr.replace(/\//g,'-').replace(/-(\d)(?=-|$)/g,'-0$1');
+        }
+        normalized[dateStr]=m.junkaiSchedule[key];
+      });
+      DB.junkaiSchedule=normalized;
+    }
+    if(m.companies&&m.companies.length){
+      m.companies.forEach(c=>{if(c.id)c.id=Number(c.id);});
+      DB.companies=m.companies;
+    }
+    if(m.koushu&&m.koushu.length){
+      m.koushu.forEach(k=>{if(k.id)k.id=Number(k.id);});
+      DB.koushu=m.koushu;
+    }
+    if(m.shiki&&m.shiki.length){
+      m.shiki.forEach(s=>{if(s.id)s.id=Number(s.id);});
+      DB.shiki=m.shiki;
+    }
     if(m.kagaku&&m.kagaku.length) DB.kagaku=m.kagaku;
     if(m.anzenItems&&m.anzenItems.length) DB.anzenItems=m.anzenItems;
     if(m.shikakuMaster&&m.shikakuMaster.length) DB.shikakuMaster=m.shikakuMaster;
