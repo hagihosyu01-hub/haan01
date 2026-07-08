@@ -2855,18 +2855,22 @@ async function loadMasterFromGAS(){
     }
     // マスタをDBに反映
     const m=data.master;
-    if(m.jimuin) DB.jimuin=m.jimuin;
-    if(m.kantokuMaster) DB.kantokuMaster=m.kantokuMaster;
-    if(m.junkaiMaster) DB.junkaiMaster=m.junkaiMaster;
-    if(m.junkaiSchedule) DB.junkaiSchedule=m.junkaiSchedule;
-    if(m.companies) DB.companies=m.companies;
-    if(m.koushu) DB.koushu=m.koushu;
-    if(m.shiki) DB.shiki=m.shiki;
-    if(m.kagaku) DB.kagaku=m.kagaku;
-    if(m.anzenItems) DB.anzenItems=m.anzenItems;
-    if(m.shikakuMaster) DB.shikakuMaster=m.shikakuMaster;
-    if(m.shikakuHoyu) DB.shikakuHoyu=m.shikakuHoyu;
-    if(m.kyPattern) DB.kyPattern=m.kyPattern;
+    console.log('GASマスタ取得:',Object.keys(m).map(k=>{
+      const v=m[k];
+      return k+':'+(Array.isArray(v)?v.length+'件':typeof v==='object'?Object.keys(v).length+'keys':v);
+    }).join(', '));
+    if(m.jimuin&&m.jimuin.length) DB.jimuin=m.jimuin;
+    if(m.kantokuMaster&&m.kantokuMaster.length) DB.kantokuMaster=m.kantokuMaster;
+    if(m.junkaiMaster&&m.junkaiMaster.length) DB.junkaiMaster=m.junkaiMaster;
+    if(m.junkaiSchedule&&Object.keys(m.junkaiSchedule).length) DB.junkaiSchedule=m.junkaiSchedule;
+    if(m.companies&&m.companies.length) DB.companies=m.companies;
+    if(m.koushu&&m.koushu.length) DB.koushu=m.koushu;
+    if(m.shiki&&m.shiki.length) DB.shiki=m.shiki;
+    if(m.kagaku&&m.kagaku.length) DB.kagaku=m.kagaku;
+    if(m.anzenItems&&m.anzenItems.length) DB.anzenItems=m.anzenItems;
+    if(m.shikakuMaster&&m.shikakuMaster.length) DB.shikakuMaster=m.shikakuMaster;
+    if(m.shikakuHoyu&&m.shikakuHoyu.length) DB.shikakuHoyu=m.shikakuHoyu;
+    if(m.kyPattern&&m.kyPattern.length) DB.kyPattern=m.kyPattern;
     // settingsはAPIキー等を上書きしないよう個別マージ
     if(m.settings){
       Object.keys(m.settings).forEach(k=>{
