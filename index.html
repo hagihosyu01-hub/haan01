@@ -2500,8 +2500,8 @@ function renderKagakuBlock(blockId){
       <label style="font-size:11px;color:var(--text2);font-weight:500;display:block;margin-bottom:4px">使用化学物質（複数選択可）</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${DB.kagaku.map(k=>`
-          <label style="display:flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;background:var(--bg2)">
-            <input type="checkbox" class="kgchk-${blockId}" value="${k.id}" onchange="onKagakuMultiSelect('${blockId}')" ${prevSelected.includes(String(k.id))?'checked':''} style="accent-color:var(--danger)">
+          <label style="display:flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;background:var(--bg2);white-space:nowrap">
+            <input type="checkbox" class="kgchk-${blockId}" value="${k.id}" onchange="onKagakuMultiSelect('${blockId}')" ${prevSelected.includes(String(k.id))?'checked':''} style="accent-color:var(--danger);flex-shrink:0">
             ${k.name}
           </label>`).join('')}
       </div>
