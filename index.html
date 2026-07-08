@@ -131,7 +131,10 @@ textarea{resize:vertical;min-height:56px;}
 .role-radio-label{display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:11px;transition:all 0.15s;white-space:nowrap;}
 .role-radio-label:hover{background:var(--bg2);}
 .role-radio-label input[type=radio]{width:12px;height:12px;accent-color:var(--accent2);}
+.role-radio-label input[type=checkbox]{width:12px;height:12px;accent-color:var(--accent2);}
 .role-radio-label.selected{border-color:var(--accent2);background:rgba(16,185,129,0.12);color:var(--accent2);font-weight:600;}
+.role-short{display:none;}
+@media(max-width:900px){.role-full{display:none;}.role-short{display:inline;}}
 .ukeoi-badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600;}
 .ukeoi-motouke{background:rgba(59,130,246,0.15);color:#60a5fa;}
 .ukeoi-ichi{background:rgba(245,158,11,0.15);color:#fbbf24;}
@@ -1514,12 +1517,13 @@ function buildRoleRadios(jimuin){
   
   // チェックボックス（全員共通で表示）
   const opts=getRoleOptions(eff);
-  html+=`<div class="role-radio-group">${opts.map(o=>{
+  html+=`<div class="role-radio-group" style="gap:3px">${opts.map(o=>{
     const checked=roles.includes(o.value);
-    return `<label class="role-radio-label${checked?' selected':''}" onclick="onRoleCheckChange(this)">
+    const shortLabel={'作業員':'作','職長':'聰','道路巡回員':'巡回員','道路巡回運行員':'運行員'}[o.label]||o.label;
+    return `<label class="role-radio-label${checked?' selected':''}" onclick="onRoleCheckChange(this)" title="${o.label}">
       <input type="checkbox" name="role-${jimuin.id}" value="${o.value}"${checked?' checked':''}
         onchange="updateRoleCheckbox(${jimuin.id})">
-      ${o.label}
+      <span class="role-full">${o.label}</span><span class="role-short">${shortLabel}</span>
     </label>`;
   }).join('')}</div>`;
   return html;
@@ -2084,8 +2088,23 @@ function renderS1JunkaiMembers(){
   if(!dateStr){area.innerHTML='<p style="font-size:12px;color:var(--text3)">日付を選択してください</p>';return;}
 
   // キーをdateStr（YYYY-MM-DD）から直接生成
-  const key=dateStr; // "2026-06-08" のまま使用
-  const sc=DB.junkaiSchedule[key];
+  const key=dateStr;
+  let sc=DB.junkaiSchedule[key];
+  // キーが見つからない場合、日付形式の違いを吸収して再検索
+  if(!sc){
+    const keys=Object.keys(DB.junkaiSchedule||{});
+    const match=keys.find(k=>{
+      if(k===key)return true;
+      // yyyy/MM/dd形式やDate文字列の場合
+      try{
+        const d=new Date(k);
+        if(!isNaN(d)&&d.toISOString().split('T')[0]===key)return true;
+      }catch(e){}
+      return false;
+    });
+    if(match) sc=DB.junkaiSchedule[match];
+  }
+  console.log('巡回スケジュール:',key,'→',sc?'あり':'なし','(全'+Object.keys(DB.junkaiSchedule||{}).length+'件)');
 
   if(!sc||(!sc.J&&!sc.U)){
     area.innerHTML=`<p style="font-size:12px;color:var(--text3)">この日（${dateStr}）のスケジュールが未登録です（道路巡回マスタで自動生成してください）</p>`;return;
