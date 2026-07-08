@@ -4693,25 +4693,26 @@ function applyKotsuShiji(id){
 // 打合せ簿の作業ブロックにパターンの指示事項を表示（AI生成の代わり）
 // ===== モード管理（管理者/作業員） =====
 const ADMIN_PASS='1739';
-let currentMode=localStorage.getItem('_anzen_mode')||'';
+let currentMode=localStorage.getItem('_anzen_mode')||'worker';
 
 function showModeDialog(){
-  document.getElementById('mode-dialog').style.display='flex';
-}
-
-function selectMode(mode){
-  if(mode==='admin'){
-    const pw=prompt('管理者パスワードを入力してください');
-    if(pw!==ADMIN_PASS){
-      if(pw!==null) alert('パスワードが違います');
-      return;
+  // バッジタップで切替
+  if(currentMode==='worker'){
+    const pw=prompt('管理者パスワードを入力');
+    if(pw===ADMIN_PASS){
+      currentMode='admin';
+      localStorage.setItem('_anzen_mode','admin');
+      applyModeRestrictions();
+      showStatus('🔑 管理者モードに切り替えました','ok');
+    }else if(pw!==null){
+      alert('パスワードが違います');
     }
+  }else{
+    currentMode='worker';
+    localStorage.setItem('_anzen_mode','worker');
+    applyModeRestrictions();
+    showStatus('👷 作業員モードに切り替えました','ok');
   }
-  currentMode=mode;
-  localStorage.setItem('_anzen_mode',mode);
-  document.getElementById('mode-dialog').style.display='none';
-  applyModeRestrictions();
-  showStatus(mode==='admin'?'🔑 管理者モード':'👷 作業員モード','ok');
 }
 
 function applyModeRestrictions(){
@@ -9151,25 +9152,9 @@ function init(){
   }
 }
 init();
-// モード選択（初回はダイアログ表示、2回目以降は保存済みモードを適用）
-if(currentMode){
-  applyModeRestrictions();
-}else{
-  showModeDialog();
-}
+// モード適用（デフォルト：作業員モード）
+applyModeRestrictions();
 </script>
-<!-- モード選択ダイアログ -->
-<div id="mode-dialog" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:99999;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:16px;padding:30px;max-width:360px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-    <div style="font-size:24px;margin-bottom:6px">🏗️</div>
-    <div style="font-size:18px;font-weight:700;color:#1c1917;margin-bottom:4px">工事安全管理システム</div>
-    <div style="font-size:12px;color:#78716c;margin-bottom:20px">使用モードを選択してください</div>
-    <button onclick="selectMode('admin')" style="display:block;width:100%;padding:14px;margin-bottom:10px;border-radius:10px;border:2px solid #0d9488;background:rgba(13,148,136,0.08);color:#0d9488;font-size:15px;font-weight:600;cursor:pointer">🔑 管理者モード<br><span style="font-size:11px;font-weight:400">マスタ編集・日付変更・全機能</span></button>
-    <button onclick="selectMode('worker')" style="display:block;width:100%;padding:14px;border-radius:10px;border:2px solid #f59e0b;background:rgba(245,158,11,0.08);color:#b45309;font-size:15px;font-weight:600;cursor:pointer">👷 作業員モード<br><span style="font-size:11px;font-weight:400">当日の打合せ簿・KY・安全巡視</span></button>
-    <div style="margin-top:12px;font-size:10px;color:#a8a29e">モードはいつでも変更できます（ヘッダーのモード表示をタップ）</div>
-  </div>
-</div>
-
 <!-- トップへ戻るボタン -->
 <button id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="トップへ戻る"
   style="position:fixed;right:20px;bottom:20px;width:48px;height:48px;border-radius:50%;border:none;
