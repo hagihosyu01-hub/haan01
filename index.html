@@ -1485,29 +1485,36 @@ function getEffectiveUkeoi(jimuin){
   return jimuin.ukeoi||'motouke';
 }
 
-// ラジオボタンHTML生成
+// チェックボックスHTML生成（複数役職対応）
 function buildRoleRadios(jimuin){
-  // 監督マスタで登録されている場合は役職を固定表示
+  const roles=(jimuin.role||'worker').split(',');
+  const eff=getEffectiveUkeoi(jimuin);
+  const isKotsu=eff==='kotsu'||eff==='kotsu2';
+  
+  let html='';
+  
+  // 監督マスタで登録されている場合はバッジ表示
   const kantokuEntry=DB.kantokuMaster.find(k=>k.name===jimuin.name);
   if(kantokuEntry){
     const roleLabel=ROLE_MAP[kantokuEntry.role]||kantokuEntry.role;
-    return `<span class="role-radio-label selected" style="border-color:var(--accent);background:rgba(245,158,11,0.12);color:var(--accent)">${roleLabel}（監督マスタ）</span>`;
+    html+=`<span class="role-radio-label selected" style="border-color:var(--accent);background:rgba(245,158,11,0.12);color:var(--accent)">${roleLabel}（監督）</span>`;
   }
-  // 巡回マスタでレギュラー登録されている場合は役職を固定表示
+  
+  // 巡回マスタでレギュラー登録されている場合はバッジ表示
   const junkaiEntries=DB.junkaiMaster.filter(m=>m.name===jimuin.name&&m.type==='regular');
   if(junkaiEntries.length>0){
     const labels=junkaiEntries.map(m=>JUNKAI_ROLE_MAP[m.role]||m.role).join('・');
-    return `<span class="role-radio-label selected" style="border-color:var(--accent2);background:rgba(16,185,129,0.12);color:var(--accent2)">${labels}（巡回マスタ）</span>`;
+    html+=`<span class="role-radio-label selected" style="border-color:var(--accent2);background:rgba(16,185,129,0.12);color:var(--accent2)">${labels}（巡回）</span>`;
   }
-  // 通常：請種類に応じたチェックボックス（複数選択可）
-  const eff=getEffectiveUkeoi(jimuin);
-  const isKotsu=eff==='kotsu'||eff==='kotsu2';
+  
+  // 交通誘導員は固定
   if(isKotsu){
     return `<span class="role-radio-label selected" style="border-color:var(--accent3);background:rgba(59,130,246,0.12);color:var(--accent3)">交通誘導員（固定）</span>`;
   }
+  
+  // チェックボックス（全員共通で表示）
   const opts=getRoleOptions(eff);
-  const roles=(jimuin.role||'worker').split(',');
-  return `<div class="role-radio-group">${opts.map(o=>{
+  html+=`<div class="role-radio-group">${opts.map(o=>{
     const checked=roles.includes(o.value);
     return `<label class="role-radio-label${checked?' selected':''}" onclick="onRoleCheckChange(this)">
       <input type="checkbox" name="role-${jimuin.id}" value="${o.value}"${checked?' checked':''}
@@ -1515,6 +1522,7 @@ function buildRoleRadios(jimuin){
       ${o.label}
     </label>`;
   }).join('')}</div>`;
+  return html;
 }
 
 function onRoleCheckChange(labelEl){
@@ -1526,8 +1534,8 @@ function updateRoleCheckbox(jimuinId){
   const checks=[...document.querySelectorAll(`input[name="role-${jimuinId}"]:checked`)];
   const roles=checks.map(c=>c.value);
   const j=DB.jimuin.find(x=>x.id===jimuinId);
-  if(j){ j.role=roles.join(','); saveDB(); }
-  // 巡回メンバー選択肢を更新
+  if(j){ j.role=roles.length?roles.join(','):'worker'; saveDB(); }
+  // 巡回メンバー選択肢を更新（テーブル再描画はしない→班が消えない）
   refreshJunkaiNameSelect();
 }
 
