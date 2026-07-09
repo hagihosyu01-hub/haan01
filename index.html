@@ -91,6 +91,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 input[readonly]{color:var(--text2);}
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px;}
 textarea{resize:vertical;min-height:56px;}
+/* date/time入力：枠が溢れ・重なるのを防ぐ（幅制御は全環境共通） */
+input[type=date],input[type=time]{min-width:0;max-width:100%;background-clip:padding-box;}
+input[type=date]::-webkit-date-and-time-value{text-align:left;}
+/* iOS Safariのみ：width:100%を無視して溢れるためネイティブ描画を無効化（Windowsのアイコンは維持） */
+@supports (-webkit-touch-callout:none){
+  input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-height:36px;}
+}
+/* 連絡事項など自動拡大するtextarea */
+textarea.autogrow{overflow:hidden;}
 .btn{padding:6px 13px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-family:inherit;}
 .btn-primary{background:var(--accent);color:#1a0f00;}.btn-primary:hover{background:#fbbf24;}
 .btn-success{background:var(--accent2);color:#001a0f;}.btn-success:hover{background:#34d399;}
@@ -429,7 +438,7 @@ textarea{resize:vertical;min-height:56px;}
           <label>📢 連絡事項</label>
           <button class="btn btn-ghost btn-sm" onclick="addHeatAIToRenraku()" style="font-size:11px">🌡️ 熱中症対策を追記</button>
         </div>
-        <textarea id="renraku" placeholder="本日の連絡事項を入力してください"></textarea>
+        <textarea id="renraku" class="autogrow" oninput="autoGrowTa(this)" placeholder="本日の連絡事項を入力してください"></textarea>
       </div>
     </div>
   </div>
@@ -5678,6 +5687,7 @@ function restoreUchiawase(snap){
   set('kion',snap.kion);
   set('kion-min',snap.kionMin||'');
   set('renraku',snap.renraku||'');
+  autoGrowTa(document.getElementById('renraku'));
   // 天気・気温の絵文字・色を更新
   updateTenkiColor();updateKionColor();updateHeatKyDisplay();
   // WBGTを復元（保存時の値を再表示）
@@ -7761,6 +7771,7 @@ function addHeatAIToRenraku(){
   if(!renraku)return;
   const existing=renraku.value.trim();
   renraku.value=(existing?existing+'\n\n':'')+text;
+  autoGrowTa(renraku);
   showStatus('熱中症対策を連絡事項に追記しました ✓','ok');
 }
 
@@ -9216,6 +9227,12 @@ function updateMonthHistoryInfo(){
   if(el2) el2.textContent=nendoH.toFixed(1);
 }
 
+// textarea自動拡大（内容量に応じて高さを伸ばす）
+function autoGrowTa(el){
+  if(!el)return;
+  el.style.height='auto';
+  el.style.height=(el.scrollHeight+2)+'px';
+}
 // number入力にiOS数値キーパッドを割り当て（動的生成分も含めfocusinで委譲）
 document.addEventListener('focusin',function(e){
   const el=e.target;
