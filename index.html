@@ -290,6 +290,14 @@ textarea.autogrow{overflow:hidden;}
 .input-chips span:active{background:rgba(245,158,11,0.2);border-color:var(--accent);}
 .kiken-chk-label:hover{background:var(--bg2);}
 .kiken-chk-label input[type=checkbox]{width:14px;height:14px;}
+/* 危険要因：あり/なし セグメント */
+.kiken-factor{display:flex;align-items:center;gap:8px;padding:5px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);}
+.kiken-factor-label{font-size:12px;font-weight:600;white-space:nowrap;}
+.ari-nashi{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;flex-shrink:0;}
+.an-btn{padding:4px 14px;font-size:12px;font-weight:700;background:var(--bg2);color:var(--text2);border:none;cursor:pointer;transition:all 0.12s;}
+.an-btn+.an-btn{border-left:1px solid var(--border);}
+.an-nashi.active{background:#6b7280;color:#fff;}
+.an-ari.active{background:var(--danger);color:#fff;}
 .kiken-detail{margin-top:8px;border:1px solid var(--border);border-radius:6px;padding:10px;background:var(--bg2);}
 .kiken-detail.hidden{display:none;}
 .kiken-detail-title{font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px;}
@@ -2753,6 +2761,29 @@ function toggleKiken(blockId, chk) {
   }
 }
 
+// 危険要因のあり/なしを設定（state: 'ari' | 'nashi' | ''）
+function setKiken(id, type, state){
+  const factor=document.querySelector(`.kiken-factor[data-block="${id}"][data-type="${type}"]`);
+  if(!factor)return;
+  // 同じボタンをもう一度押したら未選択に戻す
+  if(factor.dataset.state===state) state='';
+  factor.dataset.state=state;
+  const nb=factor.querySelector('.an-nashi');const ab=factor.querySelector('.an-ari');
+  if(nb)nb.classList.toggle('active',state==='nashi');
+  if(ab)ab.classList.toggle('active',state==='ari');
+  const block=document.getElementById(id+'-'+type);
+  if(block){
+    if(state==='ari'){
+      block.classList.remove('hidden');
+      if(!block.innerHTML.trim()) renderKikenDetail(block, id+'-'+type, type);
+    }else{
+      block.classList.add('hidden');
+      block.innerHTML='';
+    }
+  }
+  markUnsaved();
+}
+
 function renderKikenDetail(block, blockId, type) {
   const def = KIKEN_TYPES[type];
   const aiId = blockId + '-ai';
@@ -4506,22 +4537,31 @@ function buildSagyouHTML(id,idx){
         <div id="kagaku-suggest-${id}" style="margin-top:8px;display:none"></div>
       </div>
       <div id="kagaku-block-${id}" class="kagaku-block hidden"></div>
-      <!-- ⑥危険要因チェック -->
+      <!-- ⑥危険要因チェック（あり/なし） -->
       <div class="kiken-check-wrap">
         <div class="kiken-check-title">⚠️ 危険要因の有無</div>
         <div class="kiken-check-row">
-          <label class="kiken-chk-label">
-            <input type="checkbox" onchange="toggleKiken('${id}-ashiba',this)" style="accent-color:var(--accent)">
-            🏗️ 足場あり
-          </label>
-          <label class="kiken-chk-label">
-            <input type="checkbox" onchange="toggleKiken('${id}-kakusen',this)" style="accent-color:var(--accent)">
-            ⚡ 架空線あり
-          </label>
-          <label class="kiken-chk-label">
-            <input type="checkbox" onchange="toggleKiken('${id}-chika',this)" style="accent-color:var(--accent)">
-            🔧 地下埋設あり
-          </label>
+          <div class="kiken-factor" data-block="${id}" data-type="ashiba" data-state="">
+            <span class="kiken-factor-label">🏗️ 足場</span>
+            <div class="ari-nashi">
+              <button type="button" class="an-btn an-nashi" onclick="setKiken('${id}','ashiba','nashi')">なし</button>
+              <button type="button" class="an-btn an-ari" onclick="setKiken('${id}','ashiba','ari')">あり</button>
+            </div>
+          </div>
+          <div class="kiken-factor" data-block="${id}" data-type="kakusen" data-state="">
+            <span class="kiken-factor-label">⚡ 架空線</span>
+            <div class="ari-nashi">
+              <button type="button" class="an-btn an-nashi" onclick="setKiken('${id}','kakusen','nashi')">なし</button>
+              <button type="button" class="an-btn an-ari" onclick="setKiken('${id}','kakusen','ari')">あり</button>
+            </div>
+          </div>
+          <div class="kiken-factor" data-block="${id}" data-type="chika" data-state="">
+            <span class="kiken-factor-label">🔧 地下埋設</span>
+            <div class="ari-nashi">
+              <button type="button" class="an-btn an-nashi" onclick="setKiken('${id}','chika','nashi')">なし</button>
+              <button type="button" class="an-btn an-ari" onclick="setKiken('${id}','chika','ari')">あり</button>
+            </div>
+          </div>
         </div>
         <div id="${id}-ashiba" class="kiken-detail hidden"></div>
         <div id="${id}-kakusen" class="kiken-detail hidden"></div>
@@ -5069,16 +5109,11 @@ function doLoadYesterdayFrom(sourceDate){
             },150);
           },250);
         }
-        // 危険要因引き継ぎ
-        if(block.kikenChecked&&block.kikenChecked.length>0){
+        // 危険要因引き継ぎ（あり/なし）
+        if((block.kikenChecked&&block.kikenChecked.length>0)||(block.kikenNashi&&block.kikenNashi.length>0)){
           setTimeout(()=>{
-            block.kikenChecked.forEach(type=>{
-              if(!type)return;
-              const card=document.getElementById('card-'+id);
-              if(!card)return;
-              const chk=card.querySelector(`.kiken-chk-label[data-type="${type}"] input[type=checkbox]`);
-              if(chk){chk.checked=true;toggleKiken('kiken-'+id+'-'+type,chk);}
-            });
+            (block.kikenChecked||[]).forEach(type=>{ if(type) setKiken(id,type,'ari'); });
+            (block.kikenNashi||[]).forEach(type=>{ if(type) setKiken(id,type,'nashi'); });
           },250);
         }
         // 会社・作業員を引き継ぎ（チェック状態も引き継ぐ）
@@ -5193,6 +5228,9 @@ function buildSaveWarnings(){
     if(!shiki.length) w.push(label+'：使用資機材・養生材（未入力）');
     const sign=document.getElementById(id+'-sign');
     if(sign&&isCanvasBlank(sign)) w.push(label+'：職長サイン（未記入）');
+    // 危険要因：あり/なしのどれも未選択なら確認を促す
+    const factors=[...document.querySelectorAll('.kiken-factor[data-block="'+id+'"]')];
+    if(factors.length&&factors.every(f=>!f.dataset.state)) w.push(label+'：危険要因の有無（未確認）');
   });
   return w;
 }
@@ -5478,7 +5516,8 @@ function collectUchiawaseSnapshot(){
       // 化学物質（選択された化学物質ID）
       kagakuSelected:[...(document.querySelectorAll(`.kgchk-kagaku-block-${id}`)||[])].filter(c=>c.checked).map(c=>c.value),
       // 危険要因チェック状態
-      kikenChecked:[...(document.querySelectorAll(`#card-${id} .kiken-chk-label input[type=checkbox]`)||[])].filter(c=>c.checked).map(c=>c.closest('.kiken-chk-label')?.dataset?.type||''),
+      kikenChecked:[...(document.querySelectorAll(`#card-${id} .kiken-factor`)||[])].filter(f=>f.dataset.state==='ari').map(f=>f.dataset.type),
+      kikenNashi:[...(document.querySelectorAll(`#card-${id} .kiken-factor`)||[])].filter(f=>f.dataset.state==='nashi').map(f=>f.dataset.type),
       companies:[]};
     // 交通誘導の人員
     document.querySelectorAll('#kotsu-co-'+id+' .company-row').forEach(row=>{
@@ -5816,16 +5855,11 @@ function restoreUchiawase(snap){
             },150);
           },250);
         }
-        // 危険要因チェック状態復元
-        if(block.kikenChecked&&block.kikenChecked.length>0){
+        // 危険要因チェック状態復元（あり/なし）
+        if((block.kikenChecked&&block.kikenChecked.length>0)||(block.kikenNashi&&block.kikenNashi.length>0)){
           setTimeout(()=>{
-            block.kikenChecked.forEach(type=>{
-              if(!type)return;
-              const card=document.getElementById('card-'+id);
-              if(!card)return;
-              const chk=card.querySelector(`.kiken-chk-label[data-type="${type}"] input[type=checkbox]`);
-              if(chk){chk.checked=true;toggleKiken('kiken-'+id+'-'+type,chk);}
-            });
+            (block.kikenChecked||[]).forEach(type=>{ if(type) setKiken(id,type,'ari'); });
+            (block.kikenNashi||[]).forEach(type=>{ if(type) setKiken(id,type,'nashi'); });
           },250);
         }
         if(block.companies&&block.companies.length>0){
