@@ -239,7 +239,7 @@ textarea{resize:vertical;min-height:56px;}
 .kagaku-block{margin-top:8px;border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px;background:rgba(239,68,68,0.04);}
 .kagaku-block.hidden{display:none;}
 .kagaku-title{font-size:11px;font-weight:600;color:var(--danger);margin-bottom:10px;}
-.kagaku-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;}
+.kagaku-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;}
 .kagaku-chk{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;background:var(--bg2);line-height:1.35;}
 .kagaku-chk input{accent-color:var(--danger);flex-shrink:0;width:16px;height:16px;}
 .kagaku-chk:has(input:checked){border-color:var(--danger);background:rgba(239,68,68,0.08);}
@@ -3601,8 +3601,8 @@ function addCompanyRow(containerId,blockId){
   const opts=isKotsuBlock?getKotsuCompanyOpts():getCompanyOpts();
   div.innerHTML=`
     <div class="fg"><label>会社名</label><select class="co-sel" onchange="onCoChange(this,'${rid}')">${opts}</select></div>
-    <div id="${rid}-ninzu-wrap" class="fg num"><label>人数</label><input type="number" min="0" placeholder="0" oninput="calcTotals()"></div>
-    <div id="${rid}-hours-wrap" class="fg num"><label>時間(h)</label><input type="number" min="0" value="${getSetting('bulk-hours')||8}" step="0.5" oninput="calcTotals()"></div>
+    <div id="${rid}-ninzu-wrap" class="fg num"><label>人数</label><input type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotals()"></div>
+    <div id="${rid}-hours-wrap" class="fg num"><label>時間(h)</label><input type="number" inputmode="decimal" min="0" value="${getSetting('bulk-hours')||8}" step="0.5" oninput="calcTotals()"></div>
     <button class="btn btn-ghost btn-sm" style="padding:4px 8px" onclick="document.getElementById('${rid}').remove();calcTotals()">✕</button>
     <div id="${rid}-jisha" style="display:none;flex:0 0 100%;flex-wrap:wrap;gap:6px;margin-top:6px"></div>`;
   container.appendChild(div);
@@ -5156,9 +5156,50 @@ async function checkConflictBeforeSave(date,label){
   return true;
 }
 
+// ===== 保存前チェック（入力忘れ警告・保存は止めない）=====
+function buildSaveWarnings(){
+  const w=[];
+  // 天気・気温
+  if(!(document.getElementById('tenki')?.value||'')) w.push('天気（未選択）');
+  if(!(document.getElementById('kion')?.value||'')) w.push('予想最高気温（未入力）');
+  // 作業1（道路巡回）
+  const s1Active=[...document.querySelectorAll('#s1-junkai-members .jk-chip input[type=checkbox]')].some(c=>c.checked);
+  if(s1Active){
+    const s1sign=document.getElementById('s1-sign');
+    if(s1sign&&isCanvasBlank(s1sign)) w.push('作業1：職長サイン（未記入）');
+  }
+  // 作業2以降
+  sagyouIds.forEach((id,idx)=>{
+    const label='作業'+(idx+2);
+    const koushu=(getKoushuValFromBlock(id)||'').trim();
+    const sagyou=(getSagyouValFromBlock(id)||'').trim();
+    const companies=[...document.querySelectorAll('#co-'+id+' .company-row select.co-sel')].map(s=>s.value).filter(Boolean);
+    let chiefs=[];try{chiefs=collectChiefs(id)||[];}catch(e){}
+    let shiki=[];try{shiki=(getShikiValues('shiki-rows-'+id)||[]).filter(Boolean);}catch(e){}
+    const active=koushu||sagyou||companies.length||chiefs.length;
+    if(!active) return; // 未使用ブロックはスキップ
+    if(!koushu) w.push(label+'：工種（未選択）');
+    if(!companies.length) w.push(label+'：会社（未選択）');
+    if(!chiefs.length) w.push(label+'：作業主任者・責任者（未選択）');
+    if(!shiki.length) w.push(label+'：使用資機材・養生材（未入力）');
+    const sign=document.getElementById(id+'-sign');
+    if(sign&&isCanvasBlank(sign)) w.push(label+'：職長サイン（未記入）');
+  });
+  return w;
+}
+
 async function saveUchiawase(){
   const date=document.getElementById('kouji-date').value;
   if(!date){showStatus('日付を入力してください','err');return;}
+
+  // 入力忘れチェック（警告のみ・保存は続行可）
+  try{
+    const warns=buildSaveWarnings();
+    if(warns.length>0){
+      const ok=confirm('⚠️ 次の項目が未入力かもしれません：\n\n'+warns.map(x=>'・'+x).join('\n')+'\n\nこのまま保存しますか？\n（「キャンセル」で入力に戻れます）');
+      if(!ok){showStatus('保存を中止しました。未入力項目を確認してください','err');return;}
+    }
+  }catch(e){ /* チェック失敗時は保存を続行 */ }
 
   // データ取得に失敗した日付での保存は、既存データを上書きする恐れがあるため確認
   if(window._loadFailed===date){
@@ -9175,6 +9216,14 @@ function updateMonthHistoryInfo(){
   if(el2) el2.textContent=nendoH.toFixed(1);
 }
 
+// number入力にiOS数値キーパッドを割り当て（動的生成分も含めfocusinで委譲）
+document.addEventListener('focusin',function(e){
+  const el=e.target;
+  if(el&&el.tagName==='INPUT'&&el.type==='number'&&!el.hasAttribute('inputmode')){
+    const step=el.getAttribute('step');
+    el.setAttribute('inputmode',(step&&step!==''&&step!=='1')?'decimal':'numeric');
+  }
+});
 function init(){
   loadDB();loadSettings();
   // GAS URLを専用キーから復元（新しいファイルでも引き継ぐ）
