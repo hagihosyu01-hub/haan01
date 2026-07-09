@@ -285,6 +285,7 @@ textarea.autogrow{overflow:hidden;}
 .ky-kiken-table{width:100%;border-collapse:collapse;font-size:12px;}
 .ky-kiken-table th{background:var(--bg3);padding:4px 6px;border:1px solid var(--border);font-size:10px;white-space:nowrap;}
 .ky-kiken-table td{padding:3px 5px;border:1px solid var(--border);}
+.ky-kiken-table textarea{width:100%;font-size:12px;line-height:1.35;padding:3px 5px;min-height:30px;resize:vertical;overflow:hidden;box-sizing:border-box;}
 .input-chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;max-height:120px;overflow-y:auto;}
 .input-chips span{padding:2px 8px;border-radius:10px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);white-space:nowrap;}
 .input-chips span:active{background:rgba(245,158,11,0.2);border-color:var(--accent);}
@@ -322,7 +323,7 @@ textarea.autogrow{overflow:hidden;}
 @media(max-width:850px){
   .ky-kiken-table{table-layout:fixed;width:100%;}
   .ky-kiken-table th,.ky-kiken-table td{white-space:normal;word-break:break-word;min-width:0 !important;}
-  .ky-kiken-table input,.ky-kiken-table select{min-width:0;width:100%;font-size:11px;padding:2px 3px;}
+  .ky-kiken-table input,.ky-kiken-table select,.ky-kiken-table textarea{min-width:0;width:100%;font-size:11px;padding:2px 3px;}
   .ky-kiken-table th:nth-child(1),.ky-kiken-table td:nth-child(1){width:23%;}
   .ky-kiken-table th:nth-child(2),.ky-kiken-table td:nth-child(2){width:19%;}
   .ky-kiken-table th:nth-child(3),.ky-kiken-table td:nth-child(3){width:23%;}
@@ -3120,6 +3121,8 @@ function showTab(name,btn){
     if(fuEl&&getSetting('ky-form-url')) fuEl.value=getSetting('ky-form-url');
     // キャンバス再初期化（表示後に実行）
     setTimeout(()=>initAllCanvases(),150);
+    // KY表のtextareaの高さを内容に合わせて再調整（非表示中に生成された分の対策）
+    setTimeout(()=>document.querySelectorAll('#sec-ky .ky-kiken-table textarea').forEach(autoGrowTa),160);
     // 熱中症危険予知を自動表示
     updateHeatKyDisplay();
   }
@@ -8276,14 +8279,15 @@ function addKotsuKyRow(i,kiken='',taisaku='',juu='',kaku='',risk=''){
   const tr=document.createElement('tr');
   tr.id=rid;
   tr.innerHTML=`
-    <td><input type="text" class="kk-kiken" value="${kiken.replace(/"/g,'&quot;')}" placeholder="〜なので" style="width:100%;font-size:12px" oninput="syncKotsuKyHidden(${i})"></td>
-    <td><input type="text" class="kk-risk" value="${(risk||'').replace(/"/g,'&quot;')}" placeholder="〜になる" style="width:100%;font-size:12px" oninput="syncKotsuKyHidden(${i})"></td>
-    <td><input type="text" class="kk-taisaku" value="${taisaku.replace(/"/g,'&quot;')}" placeholder="〜する" style="width:100%;font-size:12px" oninput="syncKotsuKyHidden(${i})"></td>
+    <td><textarea class="kk-kiken autogrow" rows="1" placeholder="〜なので" oninput="autoGrowTa(this);syncKotsuKyHidden(${i})">${escTa(kiken)}</textarea></td>
+    <td><textarea class="kk-risk autogrow" rows="1" placeholder="〜になる" oninput="autoGrowTa(this);syncKotsuKyHidden(${i})">${escTa(risk)}</textarea></td>
+    <td><textarea class="kk-taisaku autogrow" rows="1" placeholder="〜する" oninput="autoGrowTa(this);syncKotsuKyHidden(${i})">${escTa(taisaku)}</textarea></td>
     <td>${sel('kk-juu',juu,juuOpts)}</td>
     <td>${sel('kk-kaku',kaku,kakOpts)}</td>
     <td class="kk-point" style="text-align:center;font-weight:700">—</td>
     <td><button class="btn btn-ghost btn-sm" onclick="document.getElementById('${rid}').remove();syncKotsuKyHidden(${i})" style="padding:2px 6px">✕</button></td>`;
   tbody.appendChild(tr);
+  tr.querySelectorAll('textarea').forEach(autoGrowTa);
   calcKotsuKyRisk(rid);
 }
 function calcKotsuKyRisk(rid){
@@ -8493,14 +8497,15 @@ function addKyKikenRow(tabIdx,kiken='',taisaku='',juu='',kakuritsu='',risk=''){
   const tr=document.createElement('tr');
   tr.id=rid;
   tr.innerHTML=`
-    <td><input type="text" class="kyk-kiken" value="${kiken.replace(/"/g,'&quot;')}" placeholder="〜なので" style="width:100%;font-size:12px" oninput="syncKyKikenHidden(${tabIdx})"></td>
-    <td><input type="text" class="kyk-risk" value="${(risk||'').replace(/"/g,'&quot;')}" placeholder="〜になる" style="width:100%;font-size:12px" oninput="syncKyKikenHidden(${tabIdx})"></td>
-    <td><input type="text" class="kyk-taisaku" value="${taisaku.replace(/"/g,'&quot;')}" placeholder="〜する" style="width:100%;font-size:12px" oninput="syncKyKikenHidden(${tabIdx})"></td>
+    <td><textarea class="kyk-kiken autogrow" rows="1" placeholder="〜なので" oninput="autoGrowTa(this);syncKyKikenHidden(${tabIdx})">${escTa(kiken)}</textarea></td>
+    <td><textarea class="kyk-risk autogrow" rows="1" placeholder="〜になる" oninput="autoGrowTa(this);syncKyKikenHidden(${tabIdx})">${escTa(risk)}</textarea></td>
+    <td><textarea class="kyk-taisaku autogrow" rows="1" placeholder="〜する" oninput="autoGrowTa(this);syncKyKikenHidden(${tabIdx})">${escTa(taisaku)}</textarea></td>
     <td>${sel('kyk-juu',juu,juuOpts)}</td>
     <td>${sel('kyk-kaku',kakuritsu,kakOpts)}</td>
     <td class="kyk-point" style="text-align:center;font-weight:700">—</td>
     <td><button class="btn btn-ghost btn-sm" onclick="document.getElementById('${rid}').remove();syncKyKikenHidden(${tabIdx})" style="padding:2px 6px">✕</button></td>`;
   tbody.appendChild(tr);
+  tr.querySelectorAll('textarea').forEach(autoGrowTa);
   calcKyRisk(rid);
 }
 // リスクポイント計算（重篤度×発生確率）
@@ -9288,8 +9293,12 @@ function updateMonthHistoryInfo(){
 function autoGrowTa(el){
   if(!el)return;
   el.style.height='auto';
-  el.style.height=(el.scrollHeight+2)+'px';
+  const h=el.scrollHeight;
+  if(h<=0){ el.style.height=''; return; } // 非表示タブ等は潰さない
+  el.style.height=(h+2)+'px';
 }
+// textarea内容用のHTMLエスケープ
+function escTa(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 // number入力にiOS数値キーパッドを割り当て（動的生成分も含めfocusinで委譲）
 document.addEventListener('focusin',function(e){
   const el=e.target;
