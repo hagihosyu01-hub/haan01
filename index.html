@@ -443,7 +443,7 @@ textarea.autogrow{overflow:hidden;}
       <div class="fg w-quarter"><label>天気 <span id="tenki-emoji" style="font-size:16px"></span></label>
         <select id="tenki" onchange="updateTenkiColor()"><option value="">📡 気象取得してください</option><option>快晴</option><option>晴れ</option><option>晴れ時々曇り</option><option>曇り時々晴れ</option><option>曇り</option><option>曇り時々雨</option><option>雨</option><option>雪</option><option>雷雨</option></select>
       </div>
-      <div class="fg w-quarter"><label>予想最高気温 (℃) <span id="kion-emoji" style="font-size:14px"></span></label><input type="number" id="kion" placeholder="📡 気象取得" oninput="updateHeatKyDisplay();updateKionColor()"></div>
+      <div class="fg w-quarter"><label>予想最高気温 (℃) <span id="kion-emoji" style="font-size:14px"></span></label><input type="number" id="kion" placeholder="📡 気象取得" oninput="updateHeatKyDisplay();updateKionColor();refreshWbgtCardForDate()"></div>
       <div class="fg w-quarter"><label>予想最低気温 (℃)</label><input type="number" id="kion-min" placeholder="📡 気象取得"></div>
       <div class="fg" style="padding-top:18px">
         <label style="font-size:10px;color:var(--text3)">🌤 気象取得</label>
@@ -3305,6 +3305,7 @@ function clearUchiawase(){
   sagyouIds.forEach(id=>document.getElementById('card-'+id)?.remove());
   sagyouIds=[];
   calcTotals();
+  refreshWbgtCardForDate();
   showStatus('消去しました','ok');
 }
 
@@ -5745,11 +5746,15 @@ function restoreUchiawase(snap){
   autoGrowTa(document.getElementById('renraku'));
   // 天気・気温の絵文字・色を更新
   updateTenkiColor();updateKionColor();updateHeatKyDisplay();
-  // WBGTを復元（保存時の値を再表示）
-  if(snap.wbgt&&snap.wbgt!=='—'&&snap.wbgt!==''){
-    const wv=parseFloat(snap.wbgt);
-    if(!isNaN(wv)) setTimeout(()=>displayWBGT(wv,'記録値'),200);
-  }
+  // WBGT復元：本日以外はその日の気温から推定、本日は保存時の記録値を再表示
+  setTimeout(()=>{
+    if(!refreshWbgtCardForDate()){ // 本日
+      if(snap.wbgt&&snap.wbgt!=='—'&&snap.wbgt!==''){
+        const wv=parseFloat(snap.wbgt);
+        if(!isNaN(wv)) displayWBGT(wv,'記録値');
+      }
+    }
+  },200);
   // 監督の人数・時間を復元
   if(snap.kantoku&&snap.kantoku.length){
     setTimeout(()=>{
@@ -7711,6 +7716,31 @@ function printJisshiHyo(){
 }
 
 
+// ローカル日付(yyyy-MM-dd)
+function localTodayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+// 過去日など湿度不明時：気温から想定湿度でWBGTを推定（GAS当日算出と同じStull式）
+function estimateWbgtFromKion(kion, rh){
+  const T=parseFloat(kion);
+  if(isNaN(T))return '';
+  const RH=(rh==null?70:rh); // 想定湿度（既定70%）
+  const Tw=T*Math.atan(0.151977*Math.sqrt(RH+8.313659))
+    +Math.atan(T+RH)-Math.atan(RH-1.676331)
+    +0.00391838*Math.pow(RH,1.5)*Math.atan(0.023101*RH)-4.686035;
+  return Math.round((0.7*Tw+0.3*T)*10)/10;
+}
+// 表示中の日付に応じた実効WBGT：本日=算出値(気象取得)、過去=表示日付の気温から推定
+function getEffectiveWbgt(){
+  const date=document.getElementById('kouji-date')?.value||'';
+  const today=localTodayStr();
+  if(date&&date===today){
+    // 本日：気象データ取得で算出したWBGT（予想気温＋湿度）
+    return (window._currentWbgt!==undefined&&window._currentWbgt!==null&&window._currentWbgt!=='')?window._currentWbgt:'';
+  }
+  // 非当日（過去・未来）：表示日付の気温から推定
+  const k=document.getElementById('kion')?.value||'';
+  return k!==''?estimateWbgtFromKion(k):'';
+}
+
 function getHeatLevel(wbgt, kion){
   let val, basis;
   if(wbgt!==null&&wbgt!==undefined&&wbgt!==''&&!isNaN(parseFloat(wbgt))){
@@ -7789,14 +7819,14 @@ function buildHeatGuidanceText(wbgt, kion){
 function updateHeatKyDisplay(){
   const el=document.getElementById('ky-heat-ai');
   if(!el)return;
-  const wbgt=(window._currentWbgt!==undefined&&window._currentWbgt!==null)?window._currentWbgt:'';
+  const wbgt=getEffectiveWbgt();
   const kion=document.getElementById('kion')?.value||'';
   el.innerHTML=buildHeatGuidanceHTML(wbgt, kion);
 }
 
 // 熱中症指示を連絡事項に追記（自動判定版）
 function addHeatAIToRenraku(){
-  const wbgt=(window._currentWbgt!==undefined&&window._currentWbgt!==null)?window._currentWbgt:'';
+  const wbgt=getEffectiveWbgt();
   let kion=document.getElementById('kion')?.value||'';
   // 気温が空の場合、予想最高気温から取得を試みる
   if(!kion&&wbgt===''){
@@ -8738,6 +8768,8 @@ async function fetchTaichouForm(tabIndex){
 // ===== WBGT取得 =====
 // ===== WBGT・天気・気温取得 =====
 async function fetchWBGT(){
+  // 本日以外を表示中は、その日の気温からWBGTを推定して表示（本日の実測は取得しない）
+  if(refreshWbgtCardForDate()) return;
   const statusEl=document.getElementById('wbgt-status');
   const displayEl=document.getElementById('wbgt-display');
   if(statusEl) statusEl.innerHTML='<span class="ai-loading">🌤 気象データ取得中...</span>';
@@ -9085,6 +9117,25 @@ function displayWBGT(val, time){
   if(guidanceEl){
     guidanceEl.innerHTML=`<div style="padding:8px 12px;border-radius:8px;background:${bgColor};border:1px solid ${borderColor};font-size:12px;color:${textColor};line-height:1.6">${guidance}</div>`;
   }
+}
+
+// 表示中の日付が本日以外なら、その日の気温からWBGTを推定してカードに表示
+function refreshWbgtCardForDate(){
+  const date=document.getElementById('kouji-date')?.value||'';
+  const today=localTodayStr();
+  if(!date||date===today) return false; // 当日は通常処理（気象取得の実測値）
+  const kion=document.getElementById('kion')?.value||'';
+  const statusEl=document.getElementById('wbgt-status');
+  const displayEl=document.getElementById('wbgt-display');
+  if(kion!==''){
+    const est=estimateWbgtFromKion(kion);
+    displayWBGT(est,'推定');
+    if(statusEl) statusEl.innerHTML=`<span style="font-size:11px;color:var(--text3)">📅 ${date} の予想最高気温 ${kion}℃ から推定（湿度70%想定）。当日の実測値ではありません</span>`;
+  }else{
+    if(displayEl) displayEl.style.display='none';
+    if(statusEl) statusEl.innerHTML='<span style="font-size:11px;color:var(--text3)">この日付は気温からWBGTを推定します。予想最高気温を入力してください</span>';
+  }
+  return true;
 }
 
 // ===== AI危険予知生成 =====
