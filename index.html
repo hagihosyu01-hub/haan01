@@ -318,6 +318,19 @@ textarea.autogrow{overflow:hidden;}
   .fg.w-quarter{flex:0 0 calc(50% - 4px);}
   .api-wrap input{width:140px;}
 }
+/* ⑦ KY危険予知表：iPad等の狭い幅では横スクロールせず、折り返して全列を表示 */
+@media(max-width:850px){
+  .ky-kiken-table{table-layout:fixed;width:100%;}
+  .ky-kiken-table th,.ky-kiken-table td{white-space:normal;word-break:break-word;min-width:0 !important;}
+  .ky-kiken-table input,.ky-kiken-table select{min-width:0;width:100%;font-size:11px;padding:2px 3px;}
+  .ky-kiken-table th:nth-child(1),.ky-kiken-table td:nth-child(1){width:23%;}
+  .ky-kiken-table th:nth-child(2),.ky-kiken-table td:nth-child(2){width:19%;}
+  .ky-kiken-table th:nth-child(3),.ky-kiken-table td:nth-child(3){width:23%;}
+  .ky-kiken-table th:nth-child(4),.ky-kiken-table td:nth-child(4){width:12%;}
+  .ky-kiken-table th:nth-child(5),.ky-kiken-table td:nth-child(5){width:12%;}
+  .ky-kiken-table th:nth-child(6),.ky-kiken-table td:nth-child(6){width:6%;}
+  .ky-kiken-table th:nth-child(7),.ky-kiken-table td:nth-child(7){width:5%;}
+}
 </style>
 </head>
 <body>
@@ -8000,7 +8013,17 @@ function syncKyFromUchiawase(){
   // KYブロック描画（各作業タブに体調チェックも含む）
   kyWorkers=[...new Set(works.flatMap(w=>w.workers))];
   renderKySagyouBlocks(works);
-  showStatus('打合せ簿から引き継ぎました ✓','ok');
+  // ⑥ 引き継いだ時点で気象データを取得しWBGTを表示（短時間の重複呼び出しは抑制）
+  try{
+    if(typeof fetchWBGT==='function'){
+      const now=Date.now();
+      if(!window._lastWbgtFetch||now-window._lastWbgtFetch>2000){
+        window._lastWbgtFetch=now;
+        fetchWBGT();
+      }
+    }
+  }catch(e){}
+  showStatus('打合せ簿から引き継ぎました ✓（WBGT取得中…）','ok');
 }
 
 // 作業ごとのKYブロック描画（タブ分けせず全作業を縦に表示）
