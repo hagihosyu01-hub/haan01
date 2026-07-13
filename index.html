@@ -1404,6 +1404,7 @@ textarea.autogrow{overflow:hidden;}
           <button class="btn btn-success btn-sm" onclick="importHoyuBulk()">一括登録</button>
           <span id="hoyu-import-status" style="font-size:11px"></span>
         </div>
+        <div id="hoyu-notfound-area" style="display:none"></div>
       </div>
     </details>
 
@@ -6824,9 +6825,9 @@ function importHoyuBulk(){
   let added=0,skipped=0,notFound=[];
   if(!DB.shikakuHoyu) DB.shikakuHoyu=[];
 
-  lines.forEach(line=>{
+  lines.forEach((line,idx)=>{
     const parts=line.split('\t').map(p=>p.trim());
-    if(parts.length<2)return;
+    if(parts.length<2){notFound.push({row:idx+1,line,reason:'形式不正（タブ区切りでない）'});return;}
     const name=parts[0];
     const shikakuKey=parts[1];
     const shuryo=parts[2]||'';
@@ -6835,12 +6836,12 @@ function importHoyuBulk(){
     // 人員を氏名で検索（スペース無視で照合）
     const norm=s=>s.replace(/[\s　]/g,'');
     const jimuin=DB.jimuin.find(j=>norm(j.name)===norm(name));
-    if(!jimuin){notFound.push(name+'（人員未登録）');return;}
+    if(!jimuin){notFound.push({row:idx+1,line,reason:`人員未登録：${name}`});return;}
 
     // 資格を番号または名前で検索
     let shikaku=DB.shikakuMaster.find(s=>s.id===shikakuKey);
     if(!shikaku) shikaku=DB.shikakuMaster.find(s=>s.name.includes(shikakuKey)||shikakuKey.includes(s.name));
-    if(!shikaku){notFound.push(shikakuKey+'（資格未登録）');return;}
+    if(!shikaku){notFound.push({row:idx+1,line,reason:`資格未登録：${shikakuKey}`});return;}
 
     // 重複チェック
     if(DB.shikakuHoyu.find(h=>String(h.jimuinId)===String(jimuin.id)&&h.shikakuId===shikaku.id)){
@@ -6851,14 +6852,61 @@ function importHoyuBulk(){
   });
 
   saveDB();renderHoyuShikaku();renderHoyuAll();
+  window._hoyuNotFound=notFound;
   if(statusEl){
     let msg=`✓ ${added}件登録`;
     if(skipped>0) msg+=`／${skipped}件重複スキップ`;
-    if(notFound.length>0) msg+=`／未照合：${notFound.slice(0,5).join('、')}`+(notFound.length>5?'...':'');
+    if(notFound.length>0) msg+=`／⚠ 未登録 ${notFound.length}件`;
     statusEl.textContent=msg;
     statusEl.style.color=notFound.length>0?'#d97706':'var(--accent2)';
   }
-  if(added>0) document.getElementById('hoyu-paste').value='';
+  renderHoyuNotFound();
+  if(added>0&&notFound.length===0) document.getElementById('hoyu-paste').value='';
+}
+
+// 登録できなかった行の一覧を表示
+function renderHoyuNotFound(){
+  const area=document.getElementById('hoyu-notfound-area');
+  if(!area)return;
+  const nf=window._hoyuNotFound||[];
+  if(nf.length===0){area.style.display='none';area.innerHTML='';return;}
+  area.style.display='block';
+  area.innerHTML=`
+    <div style="border:1px solid rgba(217,119,6,0.4);background:rgba(251,191,36,0.1);border-radius:8px;padding:10px;margin-top:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:700;color:#d97706">⚠ 登録できなかった行：${nf.length}件</span>
+        <button class="btn btn-ghost btn-sm" onclick="copyHoyuNotFound()" style="font-size:11px">📋 一覧をコピー</button>
+        <button class="btn btn-ghost btn-sm" onclick="window._hoyuNotFound=[];renderHoyuNotFound()" style="font-size:11px">閉じる</button>
+      </div>
+      <div style="max-height:260px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead><tr>
+            <th style="border:1px solid var(--border);padding:4px;background:var(--bg3)">行</th>
+            <th style="border:1px solid var(--border);padding:4px;background:var(--bg3)">理由</th>
+            <th style="border:1px solid var(--border);padding:4px;background:var(--bg3)">内容</th>
+          </tr></thead>
+          <tbody>
+            ${nf.map(n=>`<tr>
+              <td style="border:1px solid var(--border);padding:4px;text-align:center">${n.row}</td>
+              <td style="border:1px solid var(--border);padding:4px;color:#d97706;white-space:nowrap">${escTa(n.reason)}</td>
+              <td style="border:1px solid var(--border);padding:4px;font-family:monospace">${escTa(n.line)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5">
+        💡「人員未登録」＝その氏名が人員マスタにありません（表記ゆれを確認）。<br>
+        「資格未登録」＝そのコードが資格マスタにありません（「📋 CCUS資格コードを一括登録」を実行してください）。
+      </div>
+    </div>`;
+}
+
+function copyHoyuNotFound(){
+  const nf=window._hoyuNotFound||[];
+  if(nf.length===0)return;
+  const txt=nf.map(n=>`${n.row}行目\t${n.reason}\t${n.line}`).join('\n');
+  navigator.clipboard.writeText(txt).then(()=>showStatus('未登録一覧をコピーしました ✓','ok'))
+    .catch(()=>alert(txt));
 }
 
 // CCUS資格コード一括登録
