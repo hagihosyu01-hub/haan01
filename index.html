@@ -1365,7 +1365,8 @@ textarea.autogrow{overflow:hidden;}
   <div class="card">
     <div class="card-title">📜 資格マスタ（種類） <button class="btn btn-blue btn-sm" onclick="syncMasterToGAS(getSetting('gas-url'))" style="margin-left:auto;font-size:11px">📤 GASへ保存</button></div>
     <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-blue btn-sm" onclick="loadDefaultShikaku()">📋 CCUS資格コードを一括登録（201件）</button>
+      <button class="btn btn-blue btn-sm" onclick="loadDefaultShikaku()">📋 CCUS資格コードを一括登録（216件）</button>
+      <button class="btn btn-success btn-sm" onclick="rebuildShikakuMaster()" style="margin-left:6px">✨ 正規版に統一</button>
       <button class="btn btn-ghost btn-sm" onclick="dedupeShikakuMaster()" style="margin-left:6px">🧹 重複を削除</button>
       <span style="font-size:11px;color:var(--text3);align-self:center">技能講習・特別教育・各種免許などを一括登録</span>
     </div>
@@ -1443,6 +1444,21 @@ textarea.autogrow{overflow:hidden;}
         <tbody id="hoyu-shikaku-tbody"></tbody>
       </table>
     </div>
+    <!-- 資格 → 保有者の逆引き -->
+    <div style="margin-top:16px;border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--bg3)">
+      <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">🔍 資格から保有者を検索</div>
+      <div class="form-row">
+        <div class="fg">
+          <label>資格を選択</label>
+          <select id="hoyu-search-shikaku" onchange="renderShikakuHolders()"
+            style="padding:6px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+            <option value="">選択してください</option>
+          </select>
+        </div>
+      </div>
+      <div id="shikaku-holders-area" style="margin-top:10px"></div>
+    </div>
+
     <!-- 全員の資格一覧 -->
     <div style="margin-top:16px">
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">📋 全員の資格一覧</div>
@@ -1712,6 +1728,7 @@ function loadDB(){
     // 初期資格マスタ（未登録の場合のみ）
     if(DB.shikakuMaster.length===0){
       DB.shikakuMaster=[
+        {id:'16',name:'登録基幹技能士（とび土工）',kousin:false},
         {id:'30001',name:'監理技術者資格者証',kousin:false},
         {id:'30002',name:'1級建築士',kousin:false},
         {id:'30003',name:'2級建築士',kousin:false},
@@ -1726,6 +1743,8 @@ function loadDB(){
         {id:'30012',name:'2級造園施工管理技士',kousin:false},
         {id:'30013',name:'1級管工事施工管理技士',kousin:false},
         {id:'30014',name:'2級管工事施工管理技士',kousin:false},
+        {id:'30057',name:'コンクリート技士',kousin:false},
+        {id:'30059',name:'プレストレストコンクリート技士',kousin:false},
         {id:'30069',name:'解体工事施工技士',kousin:false},
         {id:'30070',name:'海上起重作業管理技士',kousin:false},
         {id:'30071',name:'あと施工アンカー技術管理士',kousin:false},
@@ -1769,34 +1788,36 @@ function loadDB(){
         {id:'34019',name:'乙種電気保安係員',kousin:false},
         {id:'34020',name:'甲種鉱害防止係員',kousin:false},
         {id:'34021',name:'乙種鉱害防止係員',kousin:false},
-        {id:'36001',name:'大型自動車',kousin:true},
-        {id:'36002',name:'中型自動車',kousin:true},
-        {id:'36035',name:'準中型自動車',kousin:true},
-        {id:'36003',name:'普通自動車',kousin:true},
-        {id:'36004',name:'大型特殊自動車',kousin:true},
-        {id:'36005',name:'大型自動二輪車',kousin:true},
-        {id:'36006',name:'普通自動二輪車',kousin:true},
-        {id:'36007',name:'小型特殊自動車',kousin:true},
-        {id:'36008',name:'原動機付自転車',kousin:true},
-        {id:'36009',name:'けん引',kousin:true},
-        {id:'36010',name:'大型第二種',kousin:true},
-        {id:'36011',name:'中型第二種',kousin:true},
-        {id:'36012',name:'普通第二種',kousin:true},
-        {id:'36013',name:'大型特殊第二種',kousin:true},
-        {id:'36014',name:'けん引第二種',kousin:true},
-        {id:'36015',name:'1級自動車整備士',kousin:true},
-        {id:'36016',name:'2級自動車整備士',kousin:true},
-        {id:'36017',name:'3級自動車整備士',kousin:true},
-        {id:'36018',name:'特殊整備士',kousin:true},
-        {id:'36019',name:'クレーン・デリック運転士',kousin:true},
-        {id:'36020',name:'クレーン・デリック運転士（クレーン限定）',kousin:true},
-        {id:'36021',name:'クレーン・デリック運転士（床上運転式クレーン限定）',kousin:true},
-        {id:'36022',name:'移動式クレーン運転士',kousin:true},
-        {id:'36023',name:'揚貨装置運転士',kousin:true},
-        {id:'36024',name:'一級小型船舶操縦士',kousin:true},
-        {id:'36025',name:'二級小型船舶操縦士',kousin:true},
-        {id:'36026',name:'二級小型船舶操縦士（湖川小出力限定）',kousin:true},
-        {id:'36027',name:'特殊小型船舶操縦士',kousin:true},
+        {id:'35001',name:'大型自動車免許等',kousin:false},
+        {id:'36001',name:'大型自動車',kousin:false},
+        {id:'36002',name:'中型自動車',kousin:false},
+        {id:'36003',name:'普通自動車',kousin:false},
+        {id:'36004',name:'大型特殊自動車',kousin:false},
+        {id:'36005',name:'大型自動二輪車',kousin:false},
+        {id:'36006',name:'普通自動二輪車',kousin:false},
+        {id:'36007',name:'小型特殊自動車',kousin:false},
+        {id:'36008',name:'原動機付自転車',kousin:false},
+        {id:'36009',name:'けん引',kousin:false},
+        {id:'36010',name:'大型第二種',kousin:false},
+        {id:'36011',name:'中型第二種',kousin:false},
+        {id:'36012',name:'普通第二種',kousin:false},
+        {id:'36013',name:'大型特殊第二種',kousin:false},
+        {id:'36014',name:'けん引第二種',kousin:false},
+        {id:'36015',name:'1級自動車整備士',kousin:false},
+        {id:'36016',name:'2級自動車整備士',kousin:false},
+        {id:'36017',name:'3級自動車整備士',kousin:false},
+        {id:'36018',name:'特殊整備士',kousin:false},
+        {id:'36019',name:'クレーン・デリック運転士',kousin:false},
+        {id:'36020',name:'クレーン・デリック運転士（クレーン限定）',kousin:false},
+        {id:'36021',name:'クレーン・デリック運転士（床上運転式クレーン限定）',kousin:false},
+        {id:'36022',name:'移動式クレーン運転士',kousin:false},
+        {id:'36023',name:'揚貨装置運転士',kousin:false},
+        {id:'36024',name:'一級小型船舶操縦士',kousin:false},
+        {id:'36025',name:'二級小型船舶操縦士',kousin:false},
+        {id:'36026',name:'二級小型船舶操縦士（湖川小出力限定）',kousin:false},
+        {id:'36027',name:'特殊小型船舶操縦士',kousin:false},
+        {id:'36035',name:'準中型自動車',kousin:false},
+        {id:'39999',name:'一般毒物劇物取扱者',kousin:false},
         {id:'40001',name:'木材加工用機械作業主任者',kousin:false},
         {id:'40002',name:'プレス機械作業主任者',kousin:false},
         {id:'40003',name:'乾燥設備作業主任者',kousin:false},
@@ -1897,6 +1918,11 @@ function loadDB(){
         {id:'50056',name:'杭圧入引抜機',kousin:false},
         {id:'50057',name:'硬質地盤圧入機',kousin:false},
         {id:'50058',name:'墜落制止用器具のうちフルハーネス型のものを用いて行う作業（ロープ高所作業を除く）',kousin:false},
+        {id:'50059',name:'テールゲートリフターの操作の業務に係る特別教育',kousin:false},
+        {id:'59001',name:'モノレール取扱主任者特別教育',kousin:false},
+        {id:'59002',name:'振動工具取扱作業者安全衛生教育',kousin:false},
+        {id:'59003',name:'テールゲートリフター特別教育',kousin:false},
+        {id:'59004',name:'林業・木材製造業墜落制止用器具特別教育',kousin:false},
         {id:'59999',name:'その他特別教育',kousin:false},
         {id:'60001',name:'職長教育（労働安全衛生法第60条）',kousin:false},
         {id:'60002',name:'安全管理者（労働安全衛生法第11条）',kousin:false},
@@ -1912,22 +1938,12 @@ function loadDB(){
         {id:'60012',name:'能力向上教育（労働安全衛生法第19条）',kousin:false},
         {id:'60013',name:'車両系建設機械（基礎工事用）運転業務従事者安全衛生教育（労働安全衛生法第60条）',kousin:false},
         {id:'60014',name:'刈払機取扱作業者に対する安全衛生教育',kousin:false},
-        {id:'69999',name:'その他安全衛生講習',kousin:false},
-        {id:'59001',name:'モノレール取扱主任者特別教育',kousin:false},
-        {id:'59002',name:'振動工具取扱作業者安全衛生教育',kousin:false},
-        {id:'59003',name:'テールゲートリフター特別教育',kousin:false},
-        {id:'59004',name:'林業・木材製造業墜落制止用器具特別教育',kousin:false},
-        {id:'00016',name:'登録基幹技能士（とび土工）',kousin:false},
-        {id:'30057',name:'コンクリート技士',kousin:false},
-        {id:'30059',name:'プレストレストコンクリート技士',kousin:false},
-        {id:'35001',name:'大型自動車免許等',kousin:false},
-        {id:'39999',name:'一般毒物劇物取扱者',kousin:false},
-        {id:'50059',name:'テールゲートリフターの操作の業務に係る特別教育',kousin:false},
         {id:'60015',name:'チェーンソー以外の振動工具取扱作業者に対する安全衛生教育',kousin:false},
         {id:'69901',name:'二次元CAD実践技術（JW_CAD）',kousin:false},
         {id:'69902',name:'二次元CAD実践技術・指導法',kousin:false},
         {id:'69903',name:'FKKフレシネー工法講習会',kousin:false},
-        {id:'69904',name:'施工管理者等のための足場点検実務者研修',kousin:false}
+        {id:'69904',name:'施工管理者等のための足場点検実務者研修',kousin:false},
+        {id:'69999',name:'その他安全衛生講習',kousin:false}
       ];
       saveDB();
     }
@@ -6911,8 +6927,9 @@ function copyHoyuNotFound(){
 }
 
 // CCUS資格コード一括登録
-function loadDefaultShikaku(){
-  const data=[
+function getDefaultShikakuList(){
+  return [
+    {id:'16',name:'登録基幹技能士（とび土工）',kousin:false},
     {id:'30001',name:'監理技術者資格者証',kousin:false},
     {id:'30002',name:'1級建築士',kousin:false},
     {id:'30003',name:'2級建築士',kousin:false},
@@ -6927,6 +6944,8 @@ function loadDefaultShikaku(){
     {id:'30012',name:'2級造園施工管理技士',kousin:false},
     {id:'30013',name:'1級管工事施工管理技士',kousin:false},
     {id:'30014',name:'2級管工事施工管理技士',kousin:false},
+    {id:'30057',name:'コンクリート技士',kousin:false},
+    {id:'30059',name:'プレストレストコンクリート技士',kousin:false},
     {id:'30069',name:'解体工事施工技士',kousin:false},
     {id:'30070',name:'海上起重作業管理技士',kousin:false},
     {id:'30071',name:'あと施工アンカー技術管理士',kousin:false},
@@ -6970,34 +6989,36 @@ function loadDefaultShikaku(){
     {id:'34019',name:'乙種電気保安係員',kousin:false},
     {id:'34020',name:'甲種鉱害防止係員',kousin:false},
     {id:'34021',name:'乙種鉱害防止係員',kousin:false},
-    {id:'36001',name:'大型自動車',kousin:true},
-    {id:'36002',name:'中型自動車',kousin:true},
-    {id:'36035',name:'準中型自動車',kousin:true},
-    {id:'36003',name:'普通自動車',kousin:true},
-    {id:'36004',name:'大型特殊自動車',kousin:true},
-    {id:'36005',name:'大型自動二輪車',kousin:true},
-    {id:'36006',name:'普通自動二輪車',kousin:true},
-    {id:'36007',name:'小型特殊自動車',kousin:true},
-    {id:'36008',name:'原動機付自転車',kousin:true},
-    {id:'36009',name:'けん引',kousin:true},
-    {id:'36010',name:'大型第二種',kousin:true},
-    {id:'36011',name:'中型第二種',kousin:true},
-    {id:'36012',name:'普通第二種',kousin:true},
-    {id:'36013',name:'大型特殊第二種',kousin:true},
-    {id:'36014',name:'けん引第二種',kousin:true},
-    {id:'36015',name:'1級自動車整備士',kousin:true},
-    {id:'36016',name:'2級自動車整備士',kousin:true},
-    {id:'36017',name:'3級自動車整備士',kousin:true},
-    {id:'36018',name:'特殊整備士',kousin:true},
-    {id:'36019',name:'クレーン・デリック運転士',kousin:true},
-    {id:'36020',name:'クレーン・デリック運転士（クレーン限定）',kousin:true},
-    {id:'36021',name:'クレーン・デリック運転士（床上運転式クレーン限定）',kousin:true},
-    {id:'36022',name:'移動式クレーン運転士',kousin:true},
-    {id:'36023',name:'揚貨装置運転士',kousin:true},
-    {id:'36024',name:'一級小型船舶操縦士',kousin:true},
-    {id:'36025',name:'二級小型船舶操縦士',kousin:true},
-    {id:'36026',name:'二級小型船舶操縦士（湖川小出力限定）',kousin:true},
-    {id:'36027',name:'特殊小型船舶操縦士',kousin:true},
+    {id:'35001',name:'大型自動車免許等',kousin:false},
+    {id:'36001',name:'大型自動車',kousin:false},
+    {id:'36002',name:'中型自動車',kousin:false},
+    {id:'36003',name:'普通自動車',kousin:false},
+    {id:'36004',name:'大型特殊自動車',kousin:false},
+    {id:'36005',name:'大型自動二輪車',kousin:false},
+    {id:'36006',name:'普通自動二輪車',kousin:false},
+    {id:'36007',name:'小型特殊自動車',kousin:false},
+    {id:'36008',name:'原動機付自転車',kousin:false},
+    {id:'36009',name:'けん引',kousin:false},
+    {id:'36010',name:'大型第二種',kousin:false},
+    {id:'36011',name:'中型第二種',kousin:false},
+    {id:'36012',name:'普通第二種',kousin:false},
+    {id:'36013',name:'大型特殊第二種',kousin:false},
+    {id:'36014',name:'けん引第二種',kousin:false},
+    {id:'36015',name:'1級自動車整備士',kousin:false},
+    {id:'36016',name:'2級自動車整備士',kousin:false},
+    {id:'36017',name:'3級自動車整備士',kousin:false},
+    {id:'36018',name:'特殊整備士',kousin:false},
+    {id:'36019',name:'クレーン・デリック運転士',kousin:false},
+    {id:'36020',name:'クレーン・デリック運転士（クレーン限定）',kousin:false},
+    {id:'36021',name:'クレーン・デリック運転士（床上運転式クレーン限定）',kousin:false},
+    {id:'36022',name:'移動式クレーン運転士',kousin:false},
+    {id:'36023',name:'揚貨装置運転士',kousin:false},
+    {id:'36024',name:'一級小型船舶操縦士',kousin:false},
+    {id:'36025',name:'二級小型船舶操縦士',kousin:false},
+    {id:'36026',name:'二級小型船舶操縦士（湖川小出力限定）',kousin:false},
+    {id:'36027',name:'特殊小型船舶操縦士',kousin:false},
+    {id:'36035',name:'準中型自動車',kousin:false},
+    {id:'39999',name:'一般毒物劇物取扱者',kousin:false},
     {id:'40001',name:'木材加工用機械作業主任者',kousin:false},
     {id:'40002',name:'プレス機械作業主任者',kousin:false},
     {id:'40003',name:'乾燥設備作業主任者',kousin:false},
@@ -7098,6 +7119,11 @@ function loadDefaultShikaku(){
     {id:'50056',name:'杭圧入引抜機',kousin:false},
     {id:'50057',name:'硬質地盤圧入機',kousin:false},
     {id:'50058',name:'墜落制止用器具のうちフルハーネス型のものを用いて行う作業（ロープ高所作業を除く）',kousin:false},
+    {id:'50059',name:'テールゲートリフターの操作の業務に係る特別教育',kousin:false},
+    {id:'59001',name:'モノレール取扱主任者特別教育',kousin:false},
+    {id:'59002',name:'振動工具取扱作業者安全衛生教育',kousin:false},
+    {id:'59003',name:'テールゲートリフター特別教育',kousin:false},
+    {id:'59004',name:'林業・木材製造業墜落制止用器具特別教育',kousin:false},
     {id:'59999',name:'その他特別教育',kousin:false},
     {id:'60001',name:'職長教育（労働安全衛生法第60条）',kousin:false},
     {id:'60002',name:'安全管理者（労働安全衛生法第11条）',kousin:false},
@@ -7113,23 +7139,19 @@ function loadDefaultShikaku(){
     {id:'60012',name:'能力向上教育（労働安全衛生法第19条）',kousin:false},
     {id:'60013',name:'車両系建設機械（基礎工事用）運転業務従事者安全衛生教育（労働安全衛生法第60条）',kousin:false},
     {id:'60014',name:'刈払機取扱作業者に対する安全衛生教育',kousin:false},
-    {id:'69999',name:'その他安全衛生講習',kousin:false},
-    {id:'59001',name:'モノレール取扱主任者特別教育',kousin:false},
-    {id:'59002',name:'振動工具取扱作業者安全衛生教育',kousin:false},
-    {id:'59003',name:'テールゲートリフター特別教育',kousin:false},
-    {id:'59004',name:'林業・木材製造業墜落制止用器具特別教育',kousin:false},
-    {id:'00016',name:'登録基幹技能士（とび土工）',kousin:false},
-    {id:'30057',name:'コンクリート技士',kousin:false},
-    {id:'30059',name:'プレストレストコンクリート技士',kousin:false},
-    {id:'35001',name:'大型自動車免許等',kousin:false},
-    {id:'39999',name:'一般毒物劇物取扱者',kousin:false},
-    {id:'50059',name:'テールゲートリフターの操作の業務に係る特別教育',kousin:false},
     {id:'60015',name:'チェーンソー以外の振動工具取扱作業者に対する安全衛生教育',kousin:false},
     {id:'69901',name:'二次元CAD実践技術（JW_CAD）',kousin:false},
     {id:'69902',name:'二次元CAD実践技術・指導法',kousin:false},
     {id:'69903',name:'FKKフレシネー工法講習会',kousin:false},
-    {id:'69904',name:'施工管理者等のための足場点検実務者研修',kousin:false}
+    {id:'69904',name:'施工管理者等のための足場点検実務者研修',kousin:false},
+    {id:'69999',name:'その他安全衛生講習',kousin:false}
+  
   ];
+}
+
+// CCUS資格コード一括登録
+function loadDefaultShikaku(){
+  const data=getDefaultShikakuList();
   let added=0;
   data.forEach(d=>{
     if(!DB.shikakuMaster.find(s=>s.id===d.id)){
@@ -7138,6 +7160,54 @@ function loadDefaultShikaku(){
   });
   saveDB();renderShikakuMaster();refreshHoyuShikakuSel();
   showStatus(added+'件の資格を登録しました ✓','ok');
+}
+
+// 資格マスタを正規版（216件）に統一する
+function rebuildShikakuMaster(){
+  const data=getDefaultShikakuList();
+  const norm=s=>String(s||'').replace(/[\s　]/g,'').trim();
+  const before=(DB.shikakuMaster||[]).length;
+
+  // 旧ID → 新ID の対応を作る（IDの前ゼロ違い・資格名一致で吸収）
+  const byId=new Map(data.map(d=>[String(d.id),d]));
+  const byName=new Map(data.map(d=>[norm(d.name),d]));
+  const remap=new Map(); const orphan=[];
+  (DB.shikakuMaster||[]).forEach(s=>{
+    const sid=String(s.id);
+    if(byId.has(sid)) return;                                   // そのまま
+    const trimmed=sid.replace(/^0+/,'');                        // 00016 → 16
+    if(byId.has(trimmed)){ remap.set(sid,trimmed); return; }
+    const hit=byName.get(norm(s.name));                         // 資格名で一致
+    if(hit){ remap.set(sid,String(hit.id)); return; }
+    orphan.push(s);                                             // 正規版に無い独自資格
+  });
+
+  let msg=`資格マスタを正規版（${data.length}件）に統一します。\n\n現在：${before}件`;
+  if(remap.size>0) msg+=`\n・資格番号を付け替え：${remap.size}件（例：00016→16）`;
+  if(orphan.length>0) msg+=`\n・正規版に無い独自資格：${orphan.length}件（そのまま残します）\n  ${orphan.slice(0,5).map(o=>o.id+' '+o.name).join('\n  ')}`;
+  msg+='\n\n※保有資格の記録は新しい資格番号へ引き継ぎます。\n実行しますか？';
+  if(!confirm(msg))return;
+
+  // 保有資格のIDを付け替え
+  if(DB.shikakuHoyu&&DB.shikakuHoyu.length>0){
+    DB.shikakuHoyu.forEach(h=>{
+      const to=remap.get(String(h.shikakuId));
+      if(to) h.shikakuId=to;
+    });
+    // 同一人物・同一資格の重複を除去
+    const seen=new Set(); const keep=[];
+    DB.shikakuHoyu.forEach(h=>{
+      const k=String(h.jimuinId)+'|'+String(h.shikakuId);
+      if(seen.has(k))return;
+      seen.add(k); keep.push(h);
+    });
+    DB.shikakuHoyu=keep;
+  }
+
+  // 正規版 ＋ 正規版に無い独自資格を残す
+  DB.shikakuMaster=data.concat(orphan);
+  saveDB();renderShikakuMaster();refreshHoyuShikakuSel();renderHoyuShikaku();renderHoyuAll();
+  showStatus(`資格マスタを統一しました（${before}件 → ${DB.shikakuMaster.length}件）✓`,'ok');
 }
 
 // 資格マスタの重複を削除（同一ID、または同一資格名をまとめる）
@@ -7242,6 +7312,81 @@ function refreshHoyuShikakuSel(){
   const sorted=[...(DB.shikakuMaster||[])].sort((a,b)=>String(a.id).localeCompare(String(b.id),'ja',{numeric:true}));
   sel.innerHTML='<option value="">選択</option>'+
     sorted.map(s=>`<option value="${s.id}">${s.id}　${s.name}</option>`).join('');
+
+  // 資格→保有者検索用のセレクト（保有者数つき・保有者がいる資格を先頭にまとめる）
+  const ssel=document.getElementById('hoyu-search-shikaku');
+  if(ssel){
+    const prev=ssel.value;
+    const cnt=id=>(DB.shikakuHoyu||[]).filter(h=>String(h.shikakuId)===String(id)).length;
+    const held=sorted.filter(s=>cnt(s.id)>0);
+    const none=sorted.filter(s=>cnt(s.id)===0);
+    const opt=s=>`<option value="${s.id}">${s.id}　${s.name}${cnt(s.id)>0?`（${cnt(s.id)}名）`:''}</option>`;
+    ssel.innerHTML='<option value="">選択してください</option>'+
+      (held.length?`<optgroup label="保有者あり（${held.length}件）">${held.map(opt).join('')}</optgroup>`:'')+
+      (none.length?`<optgroup label="保有者なし">${none.map(opt).join('')}</optgroup>`:'');
+    if(prev){ssel.value=prev;}
+  }
+}
+
+// 資格を選ぶと、その資格を持つ人の氏名一覧を表示
+function renderShikakuHolders(){
+  const area=document.getElementById('shikaku-holders-area');if(!area)return;
+  const sid=document.getElementById('hoyu-search-shikaku')?.value||'';
+  if(!sid){area.innerHTML='';return;}
+  const s=(DB.shikakuMaster||[]).find(x=>String(x.id)===String(sid));
+  const records=(DB.shikakuHoyu||[]).filter(h=>String(h.shikakuId)===String(sid));
+
+  if(records.length===0){
+    area.innerHTML=`<div style="padding:10px;border:1px dashed var(--border);border-radius:6px;font-size:12px;color:var(--text3)">
+      この資格の保有者は登録されていません</div>`;
+    return;
+  }
+
+  const today=new Date();
+  const rows=records.map(h=>{
+    const j=(DB.jimuin||[]).find(x=>String(x.id)===String(h.jimuinId));
+    let status='—',color='var(--text3)';
+    if(h.limit){
+      const diff=Math.floor((new Date(h.limit)-today)/(86400000));
+      if(diff<0){status='期限切れ';color='var(--danger)';}
+      else if(diff<=90){status=diff+'日後に更新';color='#d97706';}
+      else{status='有効';color='var(--accent2)';}
+    }
+    return {name:j?j.name:'（人員未登録）',company:j?(j.company||''):'',shuryo:h.shuryo||'—',limit:h.limit||'—',status,color};
+  }).sort((a,b)=>a.name.localeCompare(b.name,'ja'));
+
+  area.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:700;color:var(--accent)">${s?s.name:sid}</span>
+      <span style="padding:2px 10px;border-radius:10px;background:rgba(22,163,74,0.15);color:var(--accent2);font-size:12px;font-weight:700">${rows.length}名</span>
+      <button class="btn btn-ghost btn-sm" onclick="copyShikakuHolders()" style="font-size:11px">📋 氏名をコピー</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr>
+        <th style="border:1px solid var(--border);padding:5px;background:var(--bg2)">氏名</th>
+        <th style="border:1px solid var(--border);padding:5px;background:var(--bg2)">所属</th>
+        <th style="border:1px solid var(--border);padding:5px;background:var(--bg2)">修了証番号</th>
+        <th style="border:1px solid var(--border);padding:5px;background:var(--bg2)">有効期限</th>
+        <th style="border:1px solid var(--border);padding:5px;background:var(--bg2)">状態</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r=>`<tr>
+          <td style="border:1px solid var(--border);padding:5px;font-weight:600">${r.name}</td>
+          <td style="border:1px solid var(--border);padding:5px;color:var(--text2)">${r.company||'—'}</td>
+          <td style="border:1px solid var(--border);padding:5px">${r.shuryo}</td>
+          <td style="border:1px solid var(--border);padding:5px">${r.limit}</td>
+          <td style="border:1px solid var(--border);padding:5px;color:${r.color};font-weight:600;font-size:11px">${r.status}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  window._shikakuHolders=rows.map(r=>r.name);
+}
+
+function copyShikakuHolders(){
+  const names=window._shikakuHolders||[];
+  if(!names.length)return;
+  navigator.clipboard.writeText(names.join('、')).then(()=>showStatus('氏名をコピーしました ✓','ok'))
+    .catch(()=>alert(names.join('、')));
 }
 
 // 保有資格追加
@@ -7339,6 +7484,8 @@ function renderHoyuShikaku(){
 
 // 全員の資格一覧描画
 function renderHoyuAll(){
+  // 資格→保有者の検索欄も最新化（人数表示・一覧を更新）
+  try{ refreshHoyuShikakuSel(); renderShikakuHolders(); }catch(e){}
   const area=document.getElementById('hoyu-all-area');if(!area)return;
   if(!DB.jimuin.length){area.innerHTML='<p style="font-size:12px;color:var(--text3)">人員マスタが空です</p>';return;}
   // 今日の日付
