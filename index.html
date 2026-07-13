@@ -1366,6 +1366,7 @@ textarea.autogrow{overflow:hidden;}
     <div class="card-title">📜 資格マスタ（種類） <button class="btn btn-blue btn-sm" onclick="syncMasterToGAS(getSetting('gas-url'))" style="margin-left:auto;font-size:11px">📤 GASへ保存</button></div>
     <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-blue btn-sm" onclick="loadDefaultShikaku()">📋 CCUS資格コードを一括登録（201件）</button>
+      <button class="btn btn-ghost btn-sm" onclick="dedupeShikakuMaster()" style="margin-left:6px">🧹 重複を削除</button>
       <span style="font-size:11px;color:var(--text3);align-self:center">技能講習・特別教育・各種免許などを一括登録</span>
     </div>
     <div class="master-input-row">
@@ -7137,6 +7138,53 @@ function loadDefaultShikaku(){
   });
   saveDB();renderShikakuMaster();refreshHoyuShikakuSel();
   showStatus(added+'件の資格を登録しました ✓','ok');
+}
+
+// 資格マスタの重複を削除（同一ID、または同一資格名をまとめる）
+function dedupeShikakuMaster(){
+  if(!DB.shikakuMaster||DB.shikakuMaster.length===0){alert('資格マスタが空です');return;}
+  const norm=s=>String(s||'').replace(/[\s　]/g,'').trim();
+  const before=DB.shikakuMaster.length;
+  const seenId=new Map(), seenName=new Map();
+  const keep=[], remove=[];
+
+  DB.shikakuMaster.forEach(s=>{
+    const idKey=norm(s.id);
+    const nameKey=norm(s.name);
+    if(seenId.has(idKey)){ remove.push({dup:s,keep:seenId.get(idKey),why:'資格番号が重複'}); return; }
+    if(nameKey&&seenName.has(nameKey)){ remove.push({dup:s,keep:seenName.get(nameKey),why:'資格名が重複'}); return; }
+    seenId.set(idKey,s);
+    if(nameKey) seenName.set(nameKey,s);
+    keep.push(s);
+  });
+
+  if(remove.length===0){alert('重複はありませんでした（'+before+'件）');return;}
+
+  const list=remove.slice(0,20).map(r=>`・${r.dup.id} ${r.dup.name}（${r.why}）`).join('\n');
+  const msg=`重複した資格を ${remove.length}件 見つけました。\n\n${list}${remove.length>20?'\n…ほか'+(remove.length-20)+'件':''}\n\n削除して ${keep.length}件 に整理しますか？\n※保有資格の記録は、残す方の資格に付け替えます。`;
+  if(!confirm(msg))return;
+
+  // 保有資格の付け替え（削除する資格IDを、残す資格IDへ）
+  if(DB.shikakuHoyu&&DB.shikakuHoyu.length>0){
+    const map=new Map();
+    remove.forEach(r=>map.set(String(r.dup.id), String(r.keep.id)));
+    DB.shikakuHoyu.forEach(h=>{
+      const to=map.get(String(h.shikakuId));
+      if(to) h.shikakuId=to;
+    });
+    // 付け替えで生じた重複（同一人物・同一資格）を除去
+    const seen=new Set(); const hoyu=[];
+    DB.shikakuHoyu.forEach(h=>{
+      const k=String(h.jimuinId)+'|'+String(h.shikakuId);
+      if(seen.has(k))return;
+      seen.add(k); hoyu.push(h);
+    });
+    DB.shikakuHoyu=hoyu;
+  }
+
+  DB.shikakuMaster=keep;
+  saveDB();renderShikakuMaster();refreshHoyuShikakuSel();renderHoyuShikaku();renderHoyuAll();
+  showStatus(`重複 ${remove.length}件を削除しました（${before}件 → ${keep.length}件）✓`,'ok');
 }
 
 // ===== 資格管理 =====
