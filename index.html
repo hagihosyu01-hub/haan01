@@ -74,6 +74,16 @@ body{font-family:'Hiragino Sans','Meiryo',sans-serif;background:var(--bg);color:
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(245,158,11,0.06);}
 .tab-btn:hover:not(.active){color:var(--text);background:rgba(255,255,255,0.04);}
 #main{padding:14px;max-width:920px;margin:0 auto;}
+/* 横長画面（iPad横・PC）では画面幅を活かす */
+@media(min-width:1000px){ #main{max-width:1120px;} }
+@media(min-width:1200px){ #main{max-width:1320px;} }
+@media(min-width:1500px){ #main{max-width:1500px;} }
+/* 幅を広げても日付・天気・気温などが間延びしないよう上限を設ける */
+@media(min-width:1000px){
+  .fg.w-quarter{flex:0 1 240px;}
+  .fg.w-third{flex:0 1 320px;}
+  .fg.w-half{flex:0 1 480px;}
+}
 .section{display:none;}.section.active{display:block;}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
 .card-title{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
@@ -9930,7 +9940,7 @@ const WORK_BREAK_H=1;          // 昼休憩（時間）
 const WORK_START_DEF='8:00';   // 既定の開始
 const WORK_END_DEF='17:00';    // 既定の終了
 
-// "8" "8:30" "0830" → 時（小数）に変換
+// "8" "8:30" "24" → 時（小数）に変換。24:00は翌0時として扱う
 function parseHM(v){
   if(v==null)return NaN;
   const s=String(v).trim();
@@ -9938,7 +9948,8 @@ function parseHM(v){
   let m=s.match(/^(\d{1,2})[:：]?(\d{2})?$/);
   if(!m)return NaN;
   const h=parseInt(m[1],10), mi=m[2]?parseInt(m[2],10):0;
-  if(isNaN(h)||h>23||mi>59)return NaN;
+  if(isNaN(h)||h>24||mi>59)return NaN;
+  if(h===24&&mi>0)return NaN;   // 24:30 のような指定は不可
   return h+mi/60;
 }
 // 開始・終了から実働時間（拘束6h超のとき休憩1h控除）を算出。0.5h単位に丸める
@@ -9958,7 +9969,11 @@ function onWorkTimeChange(el){
   const en=wrap.querySelector('.time-end')?.value;
   const hi=wrap.querySelector('.hours-inp');
   const h=calcWorkHours(st,en);
-  if(hi&&h!==''){ hi.value=h; hi.dataset.auto='1'; }
+  if(hi){
+    // 入力途中や不正値のときは空にする（古い時間が残って誤解を生むのを防ぐ）
+    hi.value=(h===''?'':h);
+    hi.dataset.auto=(h===''?'':'1');
+  }
   calcTotals();
 }
 
