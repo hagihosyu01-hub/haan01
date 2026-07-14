@@ -1365,8 +1365,9 @@ textarea.autogrow{overflow:hidden;}
   <div class="card">
     <div class="card-title">📜 資格マスタ（種類） <button class="btn btn-blue btn-sm" onclick="syncMasterToGAS(getSetting('gas-url'))" style="margin-left:auto;font-size:11px">📤 GASへ保存</button></div>
     <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-blue btn-sm" onclick="loadDefaultShikaku()">📋 CCUS資格コードを一括登録（216件）</button>
+      <button class="btn btn-blue btn-sm" onclick="loadDefaultShikaku()">📋 CCUS資格コードを一括登録（227件）</button>
       <button class="btn btn-success btn-sm" onclick="rebuildShikakuMaster()" style="margin-left:6px">✨ 正規版に統一</button>
+      <button class="btn btn-orange btn-sm" onclick="repairHoyuShikaku()" style="margin-left:6px">🔧 「不明」「ダブり」を修復</button>
       <button class="btn btn-ghost btn-sm" onclick="dedupeShikakuMaster()" style="margin-left:6px">🧹 重複を削除</button>
       <span style="font-size:11px;color:var(--text3);align-self:center">技能講習・特別教育・各種免許などを一括登録</span>
     </div>
@@ -6867,12 +6868,12 @@ function importHoyuBulk(){
     if(!jimuin){notFound.push({row:idx+1,line,reason:`人員未登録：${name}`});return;}
 
     // 資格を番号または名前で検索
-    let shikaku=DB.shikakuMaster.find(s=>s.id===shikakuKey);
+    let shikaku=DB.shikakuMaster.find(s=>String(s.id)===String(shikakuKey));
     if(!shikaku) shikaku=DB.shikakuMaster.find(s=>s.name.includes(shikakuKey)||shikakuKey.includes(s.name));
     if(!shikaku){notFound.push({row:idx+1,line,reason:`資格未登録：${shikakuKey}`});return;}
 
     // 重複チェック
-    if(DB.shikakuHoyu.find(h=>String(h.jimuinId)===String(jimuin.id)&&h.shikakuId===shikaku.id)){
+    if(DB.shikakuHoyu.find(h=>String(h.jimuinId)===String(jimuin.id)&&String(h.shikakuId)===String(shikaku.id))){
       skipped++;return;
     }
     DB.shikakuHoyu.push({id:Date.now()+Math.floor(Math.random()*10000),jimuinId:jimuin.id,shikakuId:shikaku.id,shuryo,limit});
@@ -7176,12 +7177,55 @@ function loadDefaultShikaku(){
   const data=getDefaultShikakuList();
   let added=0;
   data.forEach(d=>{
-    if(!DB.shikakuMaster.find(s=>s.id===d.id)){
+    if(!DB.shikakuMaster.find(s=>String(s.id)===String(d.id))){
       DB.shikakuMaster.push(d);added++;
     }
   });
   saveDB();renderShikakuMaster();refreshHoyuShikakuSel();
   showStatus(added+'件の資格を登録しました ✓','ok');
+}
+
+// 保有資格の「不明」「ダブり」を修復（資格番号の型ゆれ・前ゼロを吸収）
+function repairHoyuShikaku(){
+  const hoyu=DB.shikakuHoyu||[];
+  if(hoyu.length===0){alert('保有資格が登録されていません');return;}
+  const byId=new Map((DB.shikakuMaster||[]).map(s=>[String(s.id),s]));
+
+  let fixed=0, unknown=0;
+  // ① 資格番号を文字列に統一し、前ゼロ違い（00016→16）も吸収
+  hoyu.forEach(h=>{
+    const cur=String(h.shikakuId);
+    if(byId.has(cur)){ if(h.shikakuId!==cur){h.shikakuId=cur;fixed++;} return; }
+    const trimmed=cur.replace(/^0+/,'');
+    if(byId.has(trimmed)){ h.shikakuId=trimmed; fixed++; return; }
+    const padded=cur.padStart(5,'0');
+    if(byId.has(padded)){ h.shikakuId=padded; fixed++; return; }
+    unknown++;
+  });
+  hoyu.forEach(h=>{ if(typeof h.jimuinId!=='string') h.jimuinId=String(h.jimuinId); });
+
+  // ② 同一人物・同一資格の重複を除去（修了証番号が入っている方を残す）
+  const map=new Map();
+  hoyu.forEach(h=>{
+    const k=String(h.jimuinId)+'|'+String(h.shikakuId);
+    const prev=map.get(k);
+    if(!prev){ map.set(k,h); return; }
+    const score=x=>(x.shuryo?2:0)+(x.limit?1:0);
+    if(score(h)>score(prev)) map.set(k,h);
+  });
+  const removed=hoyu.length-map.size;
+
+  let msg=`保有資格を点検しました（${hoyu.length}件）。\n\n`;
+  msg+=`・資格番号の形式を修正：${fixed}件\n`;
+  msg+=`・重複（ダブり）を削除：${removed}件\n`;
+  if(unknown>0) msg+=`・資格マスタに無い番号：${unknown}件（そのまま残ります）\n  ※先に「📋 CCUS資格コードを一括登録」を実行してください\n`;
+  if(fixed===0&&removed===0){alert(msg+'\n修正の必要はありませんでした。');return;}
+  msg+=`\n登録件数：${hoyu.length}件 → ${map.size}件\n\n実行しますか？`;
+  if(!confirm(msg))return;
+
+  DB.shikakuHoyu=[...map.values()];
+  saveDB();renderShikakuMaster();refreshHoyuShikakuSel();renderHoyuShikaku();renderHoyuAll();
+  showStatus(`保有資格を修復しました（形式修正${fixed}件・重複削除${removed}件）✓`,'ok');
 }
 
 // 資格マスタを正規版（216件）に統一する
@@ -7287,7 +7331,7 @@ function addShikakuMaster(){
   const name=document.getElementById('sq-name').value.trim();
   const kousin=document.getElementById('sq-kousin').checked;
   if(!id||!name){alert('資格番号と資格名は必須です');return;}
-  if(DB.shikakuMaster.find(s=>s.id===id)){alert('その資格番号は既に登録されています');return;}
+  if(DB.shikakuMaster.find(s=>String(s.id)===String(id))){alert('その資格番号は既に登録されています');return;}
   DB.shikakuMaster.push({id,name,kousin});
   saveDB();renderShikakuMaster();refreshHoyuShikakuSel();
   document.getElementById('sq-id').value='';
@@ -7418,7 +7462,7 @@ function addHoyuShikaku(){
   const shuryo=document.getElementById('hoyu-shuryo').value.trim();
   const limit=document.getElementById('hoyu-limit').value;
   if(!jimuinId||!shikakuId){alert('人員と資格を選択してください');return;}
-  if((DB.shikakuHoyu||[]).find(h=>h.jimuinId==jimuinId&&h.shikakuId===shikakuId)){
+  if((DB.shikakuHoyu||[]).find(h=>String(h.jimuinId)===String(jimuinId)&&String(h.shikakuId)===String(shikakuId))){
     alert('既に登録されています');return;
   }
   if(!DB.shikakuHoyu) DB.shikakuHoyu=[];
@@ -7438,7 +7482,7 @@ function deleteHoyuShikaku(id){
 function editHoyuShikaku(id){
   const h=(DB.shikakuHoyu||[]).find(x=>x.id===id);
   if(!h)return;
-  const s=DB.shikakuMaster.find(x=>x.id===h.shikakuId)||{name:'不明'};
+  const s=DB.shikakuMaster.find(x=>String(x.id)===String(h.shikakuId))||{name:'不明'};
   // その行を入力欄に置き換え
   const tbody=document.getElementById('hoyu-shikaku-tbody');
   const rows=tbody.querySelectorAll('tr');
@@ -7482,7 +7526,7 @@ function renderHoyuShikaku(){
   const records=(DB.shikakuHoyu||[]).filter(h=>String(h.jimuinId)===String(jimuinId));
   if(records.length===0){tbody.innerHTML='<tr><td colspan="6" style="color:var(--text3);text-align:center;font-size:12px">資格が登録されていません</td></tr>';return;}
   tbody.innerHTML=records.map(h=>{
-    const s=DB.shikakuMaster.find(x=>x.id===h.shikakuId)||{id:h.shikakuId,name:'不明',kousin:false};
+    const s=DB.shikakuMaster.find(x=>String(x.id)===String(h.shikakuId))||{id:h.shikakuId,name:'不明',kousin:false};
     let status='—';let statusColor='var(--text3)';
     if(h.limit){
       const diff=Math.floor((new Date(h.limit)-new Date())/(1000*60*60*24));
@@ -7516,7 +7560,7 @@ function renderHoyuAll(){
     const records=(DB.shikakuHoyu||[]).filter(h=>String(h.jimuinId)===String(j.id));
     if(!records.length) return '';
     const chips=records.map(h=>{
-      const s=DB.shikakuMaster.find(x=>x.id===h.shikakuId)||{id:h.shikakuId,name:'不明'};
+      const s=DB.shikakuMaster.find(x=>String(x.id)===String(h.shikakuId))||{id:h.shikakuId,name:'不明'};
       let bg='var(--bg3)';let border='var(--border)';let color='var(--text)';
       if(h.limit){
         const diff=Math.floor((new Date(h.limit)-today)/(1000*60*60*24));
@@ -7543,7 +7587,7 @@ function getShikakuBadges(jimuinId){
   if(!records.length) return '';
   const today=new Date();
   return records.map(h=>{
-    const s=DB.shikakuMaster.find(x=>x.id===h.shikakuId);
+    const s=DB.shikakuMaster.find(x=>String(x.id)===String(h.shikakuId));
     if(!s) return '';
     let color='#6b7280';
     if(h.limit){
@@ -9192,7 +9236,7 @@ function checkSagyouChief(id){
   const seen=new Set();
   const unique=matched.filter(m=>{if(seen.has(m.shikakuId))return false;seen.add(m.shikakuId);return true;});
   areaEl.innerHTML=unique.map((rule,i)=>{
-    const holders=DB.jimuin.filter(j=>(DB.shikakuHoyu||[]).some(h=>String(h.jimuinId)===String(j.id)&&h.shikakuId===rule.shikakuId));
+    const holders=DB.jimuin.filter(j=>(DB.shikakuHoyu||[]).some(h=>String(h.jimuinId)===String(j.id)&&String(h.shikakuId)===String(rule.shikakuId)));
     const opts=holders.map(j=>`<option value="${j.name}">${j.name}（${j.company||''}）</option>`).join('');
     return `<div style="border:1px solid rgba(124,58,237,0.2);border-radius:6px;padding:8px;margin-bottom:6px;background:var(--bg2)">
       <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:3px">📋 ${rule.name}</div>
