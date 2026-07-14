@@ -449,6 +449,7 @@ textarea.autogrow{overflow:hidden;}
     <button class="tab-btn" onclick="showTab('anzen-junshi',this)">✅ 安全巡視点検</button>
     <button class="tab-btn" onclick="showTab('jisshi-hyo',this)">📅 月間実施表</button>
     <button class="tab-btn" onclick="showTab('zangyo',this)">⏱️ 残業集計</button>
+    <button class="tab-btn" onclick="showTab('yukyu',this)">🏖️ 有給管理</button>
     <button class="tab-btn" onclick="showTab('help',this)">❓ 使い方</button>
     <button class="tab-btn" id="tab-settings" onclick="showTab('settings',this)">⚙️ 設定</button>
   </div>
@@ -852,6 +853,53 @@ textarea.autogrow{overflow:hidden;}
       <div id="zangyo-status" style="font-size:12px;color:var(--text3)"></div>
     </div>
     <div id="zangyo-area" style="margin-top:14px;overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- ===== 有給管理 ===== -->
+<div id="sec-yukyu" class="section">
+  <div class="card">
+    <div class="card-title">🏖️ 有給休暇 残日数管理
+      <div class="ml">
+        <select id="yukyu-nendo" onchange="renderYukyu()" style="max-width:170px"></select>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">
+      年度初めに<b>繰越</b>と<b>今年度の付与</b>を入力すれば、あとは取得日を記録するだけで<b>残日数が自動計算</b>されます。
+      日付をクリックすると <b style="color:#0891b2">全休</b> → <b style="color:#f59e0b">半休</b> → 取消 の順に切り替わります。
+    </p>
+
+    <div class="form-row" style="align-items:flex-end;gap:8px;margin-bottom:10px">
+      <button class="btn btn-blue btn-sm" onclick="yukyuCarryOver()">↩️ 前年度の残りを繰越</button>
+      <button class="btn btn-ghost btn-sm" onclick="yukyuPasteOpen()">📋 まとめて入力（貼り付け）</button>
+      <div id="yukyu-status" style="font-size:12px;color:var(--text3)"></div>
+    </div>
+
+    <div id="yukyu-paste-wrap" class="hidden" style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg2)">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px">
+        Excelから <b>氏名 / 繰越 / 付与</b> の3列をコピーして貼り付け → 一括登録（タブ区切り）
+      </div>
+      <textarea id="yukyu-paste" rows="5" placeholder="中村敬&#9;5&#9;20&#10;梅月典久&#9;3&#9;18" style="font-family:monospace;font-size:12px"></textarea>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn btn-success btn-sm" onclick="yukyuPasteImport()">一括登録</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('yukyu-paste-wrap').classList.add('hidden')">閉じる</button>
+      </div>
+    </div>
+
+    <div id="yukyu-area" style="overflow-x:auto"></div>
+  </div>
+
+  <!-- 取得日カレンダー -->
+  <div class="card">
+    <div class="card-title">📆 取得日を記録
+      <div class="ml">
+        <select id="yukyu-person" onchange="renderYukyuCal()" style="max-width:200px"></select>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">
+      人を選んでから、有給を取った日をクリックしてください。
+    </p>
+    <div id="yukyu-cal-area"></div>
   </div>
 </div>
 
@@ -1593,7 +1641,7 @@ textarea.autogrow{overflow:hidden;}
 <div id="save-status"></div>
 
 <script>
-let DB={jimuin:[],kantokuMaster:[],junkaiMaster:[],junkaiSchedule:{},calendar:{},companies:[],koushu:[],shiki:[],kagaku:[],anzenItems:[],settings:{},history:[],
+let DB={jimuin:[],kantokuMaster:[],junkaiMaster:[],junkaiSchedule:{},calendar:{},yukyu:{},companies:[],koushu:[],shiki:[],kagaku:[],anzenItems:[],settings:{},history:[],
   shikakuMaster:[], // 資格マスタ（種類）
   shikakuHoyu:[],   // 保有資格（人員×資格）
   anzenJunshi:[],   // 安全巡視点検記録
@@ -2100,6 +2148,7 @@ function loadDB(){
     if(!DB.junkaiMaster) DB.junkaiMaster=[];
     if(!DB.junkaiSchedule) DB.junkaiSchedule={};
     if(!DB.calendar) DB.calendar={};
+    if(!DB.yukyu) DB.yukyu={};
     // 既存データのマイグレーション
     const typeMap={jisha:'元請',motouke:'元請',shita:'一次下請',shita1:'一次下請',shita2:'二次下請',ichi:'一次下請',ni:'二次下請'};
     DB.companies.forEach(c=>{if(typeMap[c.type]) c.type=typeMap[c.type];});
@@ -8372,6 +8421,222 @@ function calClearMonth(){
   showStatus(label+'の休日設定をリセットしました','ok');
 }
 
+// ===== 有給休暇 残日数管理 =====
+// DB.yukyu[nendo] = { [氏名]: {carry:繰越, grant:付与, days:{ '2026-05-01':1 | 0.5 }} }
+function yukyuData(nendo){
+  if(!DB.yukyu) DB.yukyu={};
+  if(!DB.yukyu[nendo]) DB.yukyu[nendo]={};
+  return DB.yukyu[nendo];
+}
+function yukyuPerson(nendo,name){
+  const d=yukyuData(nendo);
+  if(!d[name]) d[name]={carry:0,grant:0,days:{}};
+  if(!d[name].days) d[name].days={};
+  return d[name];
+}
+// 取得日数（全休1・半休0.5）
+function yukyuUsed(p){
+  return Object.values(p.days||{}).reduce((s,v)=>s+(parseFloat(v)||0),0);
+}
+// 5日取得義務の対象＝付与10日以上
+function yukyuGimuTarget(p){ return (parseFloat(p.grant)||0)>=10; }
+
+function initYukyuNendo(){
+  const sel=document.getElementById('yukyu-nendo');
+  if(!sel)return;
+  const cur=currentNendo();
+  let html='';
+  for(let y=cur;y>=cur-3;y--) html+=`<option value="${y}">${y}年度（${y}/4〜${y+1}/3）</option>`;
+  sel.innerHTML=html;
+}
+
+function renderYukyu(){
+  const area=document.getElementById('yukyu-area');
+  const nendo=parseInt(document.getElementById('yukyu-nendo')?.value||currentNendo());
+  if(!area)return;
+  const list=[...(DB.jimuin||[])].filter(j=>j.name);
+  if(list.length===0){
+    area.innerHTML='<p style="font-size:13px;color:var(--text3);padding:12px">人員マスタに従業員を登録してください。</p>';
+    return;
+  }
+
+  let html=`<table class="zangyo-table"><thead><tr>
+    <th>氏名</th><th>繰越</th><th>今年度<br>付与</th><th>合計</th><th>取得</th><th>残日数</th><th>5日<br>義務</th>
+  </tr></thead><tbody>`;
+  let sumGrant=0,sumUsed=0,sumZan=0,gimuNg=0;
+  list.forEach(j=>{
+    const p=yukyuPerson(nendo,j.name);
+    const carry=parseFloat(p.carry)||0, grant=parseFloat(p.grant)||0;
+    const total=carry+grant, used=yukyuUsed(p), zan=Math.round((total-used)*10)/10;
+    sumGrant+=total; sumUsed+=used; sumZan+=zan;
+    const gimu=yukyuGimuTarget(p);
+    const gimuOk=!gimu||used>=5;
+    if(gimu&&!gimuOk) gimuNg++;
+    html+=`<tr>
+      <td style="font-weight:600;white-space:nowrap">${j.name}</td>
+      <td style="text-align:center"><input type="number" step="0.5" min="0" value="${carry}" style="width:60px;text-align:center;padding:2px"
+        onchange="yukyuSet('${j.name}','carry',this.value)"></td>
+      <td style="text-align:center"><input type="number" step="0.5" min="0" value="${grant}" style="width:60px;text-align:center;padding:2px"
+        onchange="yukyuSet('${j.name}','grant',this.value)"></td>
+      <td style="text-align:center;color:var(--text2)">${total}</td>
+      <td style="text-align:center;font-weight:600">${used||'—'}</td>
+      <td style="text-align:center;font-weight:700;font-size:14px;color:${zan<0?'var(--danger)':zan<=3?'#d97706':'var(--accent2)'}">${zan}</td>
+      <td style="text-align:center;font-size:10px;font-weight:700;white-space:nowrap;color:${!gimu?'var(--text3)':gimuOk?'var(--accent2)':'var(--danger)'}">
+        ${!gimu?'対象外':gimuOk?'✓ 達成':'あと'+Math.round((5-used)*10)/10+'日'}</td>
+    </tr>`;
+  });
+  html+=`</tbody><tfoot><tr style="background:var(--bg3);font-weight:700">
+    <td colspan="3" style="text-align:center">合計（${list.length}名）</td>
+    <td style="text-align:center">${Math.round(sumGrant*10)/10}</td>
+    <td style="text-align:center">${Math.round(sumUsed*10)/10}</td>
+    <td style="text-align:center">${Math.round(sumZan*10)/10}</td>
+    <td></td>
+  </tr></tfoot></table>`;
+
+  if(gimuNg>0){
+    html=`<div style="border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--danger);font-weight:600">
+      ⚠️ 年5日の取得義務が未達成：${gimuNg}名（年10日以上付与された方は、年5日以上の取得が法律上の義務です）
+    </div>`+html;
+  }
+  html+=`<div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.7">
+    <b>繰越</b>＝前年度の未消化分（時効は2年）。<b>付与</b>＝今年度に新しく付与された日数。<br>
+    <span style="color:var(--text3)">※付与日数は勤続年数によって決まります。就業規則や労基法の付与表をご確認のうえ入力してください。</span>
+  </div>`;
+
+  area.innerHTML=html;
+  refreshYukyuPersonSel();
+  renderYukyuCal();
+}
+
+function yukyuSet(name,key,val){
+  const nendo=parseInt(document.getElementById('yukyu-nendo')?.value||currentNendo());
+  const p=yukyuPerson(nendo,name);
+  p[key]=parseFloat(val)||0;
+  saveDB();renderYukyu();
+}
+
+// 前年度の残りを今年度の繰越に反映
+function yukyuCarryOver(){
+  const nendo=parseInt(document.getElementById('yukyu-nendo')?.value||currentNendo());
+  const prev=nendo-1;
+  const prevData=(DB.yukyu&&DB.yukyu[prev])||{};
+  if(Object.keys(prevData).length===0){alert(`${prev}年度のデータがありません。`);return;}
+  const lines=[];
+  Object.entries(prevData).forEach(([name,p])=>{
+    const zan=Math.round(((parseFloat(p.carry)||0)+(parseFloat(p.grant)||0)-yukyuUsed(p))*10)/10;
+    if(zan>0) lines.push({name,zan});
+  });
+  if(lines.length===0){alert(`${prev}年度に残日数のある方がいません。`);return;}
+  if(!confirm(`${prev}年度の残日数を、${nendo}年度の繰越に反映します。\n\n`+
+    lines.slice(0,10).map(l=>`・${l.name}：${l.zan}日`).join('\n')+
+    (lines.length>10?`\n…ほか${lines.length-10}名`:'')+
+    `\n\n※現在の繰越は上書きされます。よろしいですか？`))return;
+  lines.forEach(l=>{ yukyuPerson(nendo,l.name).carry=l.zan; });
+  saveDB();renderYukyu();
+  showStatus(`${lines.length}名の繰越を反映しました ✓`,'ok');
+}
+
+function yukyuPasteOpen(){
+  document.getElementById('yukyu-paste-wrap').classList.toggle('hidden');
+}
+function yukyuPasteImport(){
+  const nendo=parseInt(document.getElementById('yukyu-nendo')?.value||currentNendo());
+  const txt=document.getElementById('yukyu-paste').value.trim();
+  if(!txt){alert('データを貼り付けてください');return;}
+  const norm=s=>String(s||'').replace(/[\s　]/g,'');
+  let ok=0; const ng=[];
+  txt.split('\n').forEach((line,i)=>{
+    const p=line.split('\t').map(s=>s.trim());
+    if(p.length<2)return;
+    const j=(DB.jimuin||[]).find(x=>norm(x.name)===norm(p[0]));
+    if(!j){ng.push(`${i+1}行目：${p[0]}（人員未登録）`);return;}
+    const t=yukyuPerson(nendo,j.name);
+    t.carry=parseFloat(p[1])||0;
+    if(p[2]!==undefined&&p[2]!=='') t.grant=parseFloat(p[2])||0;
+    ok++;
+  });
+  saveDB();renderYukyu();
+  const el=document.getElementById('yukyu-status');
+  el.textContent=`✓ ${ok}件登録`+(ng.length?`／未照合 ${ng.length}件：${ng.slice(0,3).join('、')}`:'');
+  el.style.color=ng.length?'#d97706':'var(--accent2)';
+  if(ok>0&&!ng.length) document.getElementById('yukyu-paste').value='';
+}
+
+// ---- 取得日カレンダー ----
+function refreshYukyuPersonSel(){
+  const sel=document.getElementById('yukyu-person');
+  if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">人を選択してください</option>'+
+    (DB.jimuin||[]).filter(j=>j.name).map(j=>`<option value="${j.name}">${j.name}</option>`).join('');
+  if(prev) sel.value=prev;
+}
+
+function renderYukyuCal(){
+  const area=document.getElementById('yukyu-cal-area');
+  if(!area)return;
+  const name=document.getElementById('yukyu-person')?.value||'';
+  const nendo=parseInt(document.getElementById('yukyu-nendo')?.value||currentNendo());
+  if(!name){
+    area.innerHTML='<p style="font-size:13px;color:var(--text3);padding:12px">上のリストから人を選んでください。</p>';
+    return;
+  }
+  const p=yukyuPerson(nendo,name);
+  const total=(parseFloat(p.carry)||0)+(parseFloat(p.grant)||0);
+  const used=yukyuUsed(p), zan=Math.round((total-used)*10)/10;
+
+  const wdays=['日','月','火','水','木','金','土'];
+  let months=[];
+  for(let i=0;i<12;i++){const dt=new Date(nendo,3+i,1);months.push({y:dt.getFullYear(),m:dt.getMonth()+1});}
+
+  let cal='';
+  months.forEach(({y,m})=>{
+    const lastDay=new Date(y,m,0).getDate();
+    const firstWd=new Date(y,m-1,1).getDay();
+    cal+=`<div style="border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg2)">
+      <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:5px">${y}年 ${m}月</div>
+      <table style="width:100%;border-collapse:collapse"><thead><tr>
+      ${wdays.map((w,i)=>`<th style="padding:2px;border:1px solid var(--border);background:var(--bg3);font-size:10px;color:${i===0?'#dc2626':i===6?'#2563eb':'var(--text2)'}">${w}</th>`).join('')}
+      </tr></thead><tbody><tr>`;
+    for(let i=0;i<firstWd;i++) cal+='<td style="border:1px solid var(--border)"></td>';
+    for(let d=1;d<=lastDay;d++){
+      const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const v=parseFloat(p.days[date])||0;
+      const wd=new Date(y,m-1,d).getDay();
+      const bg=v===1?'rgba(8,145,178,0.22)':v===0.5?'rgba(245,158,11,0.22)':'transparent';
+      const col=v===1?'#0891b2':v===0.5?'#f59e0b':(wd===0?'#dc2626':wd===6?'#2563eb':'var(--text)');
+      cal+=`<td onclick="yukyuToggle('${name}','${date}')" title="${date}${v?(v===1?'　全休':'　半休'):''}"
+        style="border:1px solid var(--border);padding:3px 1px;text-align:center;cursor:pointer;background:${bg};user-select:none">
+        <div style="font-size:12px;font-weight:${v?'700':'600'};color:${col}">${d}</div>
+        <div style="font-size:8px;color:${col};height:9px">${v===1?'全':v===0.5?'半':''}</div>
+      </td>`;
+      if((firstWd+d)%7===0&&d<lastDay) cal+='</tr><tr>';
+    }
+    cal+='</tr></tbody></table></div>';
+  });
+
+  area.innerHTML=`
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:var(--bg3);border-radius:8px">
+      <span style="font-size:14px;font-weight:700">${name}</span>
+      <span style="font-size:12px;color:var(--text2)">付与合計 <b>${total}</b>日</span>
+      <span style="font-size:12px;color:var(--text2)">取得 <b>${used}</b>日</span>
+      <span style="font-size:13px;font-weight:700;color:${zan<0?'var(--danger)':zan<=3?'#d97706':'var(--accent2)'}">残り ${zan}日</span>
+      ${yukyuGimuTarget(p)?`<span style="font-size:11px;font-weight:700;color:${used>=5?'var(--accent2)':'var(--danger)'}">
+        5日義務：${used>=5?'✓ 達成':'あと'+Math.round((5-used)*10)/10+'日'}</span>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">${cal}</div>`;
+}
+
+function yukyuToggle(name,date){
+  const nendo=parseInt(document.getElementById('yukyu-nendo')?.value||currentNendo());
+  const p=yukyuPerson(nendo,name);
+  const v=parseFloat(p.days[date])||0;
+  if(v===0) p.days[date]=1;          // 全休
+  else if(v===1) p.days[date]=0.5;   // 半休
+  else delete p.days[date];          // 取消
+  saveDB();renderYukyu();
+}
+
 // ===== 年度サマリー（36協定の年間上限） =====
 // 年度：4月〜翌3月
 function currentNendo(){
@@ -10483,6 +10748,9 @@ function init(){
   const cm=document.getElementById('cal-month');
   if(cm)cm.value=today.slice(0,7);
   renderCompanyCal();
+  // 有給管理の初期化
+  initYukyuNendo();
+  renderYukyu();
   // 就業時間の設定が壊れていたら既定値に戻す（1899-... などの異常値対策）
   ['work-start','work-end'].forEach(k=>{
     const v=getSetting(k);
