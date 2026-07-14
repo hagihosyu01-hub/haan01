@@ -796,7 +796,7 @@ textarea.autogrow{overflow:hidden;}
     <div class="card-title">📆 会社カレンダー（休日設定）
       <div class="ml">
         <button class="btn btn-ghost btn-sm" onclick="calAutoWeekend()">土日を休日に一括設定</button>
-        <button class="btn btn-ghost btn-sm" onclick="calClearMonth()">この月をリセット</button>
+        <button class="btn btn-ghost btn-sm" onclick="calClearMonth()">リセット</button>
       </div>
     </div>
     <p style="font-size:11px;color:var(--text2);margin-bottom:8px">
@@ -804,10 +804,38 @@ textarea.autogrow{overflow:hidden;}
       36協定の判定に使います（法定休日の労働＝休日労働）。
     </p>
     <div class="form-row" style="align-items:flex-end;gap:10px">
-      <div class="fg" style="max-width:160px"><label>年月</label><input type="month" id="cal-month" onchange="renderCompanyCal()"></div>
+      <div class="fg" style="max-width:150px"><label>表示</label>
+        <select id="cal-view" onchange="renderCompanyCal()">
+          <option value="month">月ごと</option>
+          <option value="nendo" selected>年度（4月〜3月）</option>
+        </select>
+      </div>
+      <div class="fg" id="cal-month-wrap" style="max-width:150px;display:none">
+        <label>年月</label><input type="month" id="cal-month" onchange="renderCompanyCal()">
+      </div>
+      <div class="fg" id="cal-nendo-wrap" style="max-width:170px">
+        <label>年度</label><select id="cal-nendo" onchange="renderCompanyCal()"></select>
+      </div>
       <div style="font-size:11px;color:var(--text3)">※設定は自動保存されます</div>
     </div>
     <div id="cal-area" style="margin-top:10px"></div>
+  </div>
+
+  <!-- 年度サマリー（36協定の年間上限） -->
+  <div class="card">
+    <div class="card-title">📅 年度サマリー（36協定の年間上限）</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">
+      年度（4月〜翌3月）を通した時間外を集計します。<b>年360時間</b>・<b>月45時間超は年6回まで</b>の判定に使います。
+    </p>
+    <div class="form-row" style="align-items:flex-end;gap:10px">
+      <div class="fg" style="max-width:150px"><label>年度</label>
+        <select id="nendo-select"></select>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="loadNendo()">📊 年度集計</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyNendoCsv()">📋 CSVコピー</button>
+      <div id="nendo-status" style="font-size:12px;color:var(--text3)"></div>
+    </div>
+    <div id="nendo-area" style="margin-top:14px;overflow-x:auto"></div>
   </div>
 
   <!-- 残業集計 -->
@@ -8215,34 +8243,89 @@ function calType(date){ return (DB.calendar&&DB.calendar[date])||''; }
 function isHouteiKyujitsu(date){ return calType(date)==='houtei'; }
 function isKyujitsu(date){ const t=calType(date); return t==='houtei'||t==='gai'; }
 
-function renderCompanyCal(){
-  const area=document.getElementById('cal-area');
-  const ym=document.getElementById('cal-month')?.value;
-  if(!area||!ym)return;
-  const [y,m]=ym.split('-').map(Number);
+// 表示中の対象月リストを返す（月モード=1か月、年度モード=4月〜翌3月の12か月）
+function calTargetMonths(){
+  const view=document.getElementById('cal-view')?.value||'nendo';
+  if(view==='month'){
+    const ym=document.getElementById('cal-month')?.value;
+    if(!ym)return [];
+    const [y,m]=ym.split('-').map(Number);
+    return [{y,m}];
+  }
+  const nendo=parseInt(document.getElementById('cal-nendo')?.value||currentNendo());
+  const list=[];
+  for(let i=0;i<12;i++){
+    const dt=new Date(nendo,3+i,1);
+    list.push({y:dt.getFullYear(),m:dt.getMonth()+1});
+  }
+  return list;
+}
+
+// 1か月分のカレンダーHTML
+function calMonthHtml(y,m){
   const lastDay=new Date(y,m,0).getDate();
   const firstWd=new Date(y,m-1,1).getDay();
   const wdays=['日','月','火','水','木','金','土'];
+  const dstr=d=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 
-  let html=`<table style="width:100%;border-collapse:collapse;max-width:520px">
-    <thead><tr>${wdays.map((w,i)=>`<th style="padding:5px;border:1px solid var(--border);background:var(--bg3);font-size:11px;color:${i===0?'#dc2626':i===6?'#2563eb':'var(--text2)'}">${w}</th>`).join('')}</tr></thead><tbody><tr>`;
+  let html=`<div style="border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg2)">
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:5px">${y}年 ${m}月</div>
+    <table style="width:100%;border-collapse:collapse">
+    <thead><tr>${wdays.map((w,i)=>`<th style="padding:2px;border:1px solid var(--border);background:var(--bg3);font-size:10px;color:${i===0?'#dc2626':i===6?'#2563eb':'var(--text2)'}">${w}</th>`).join('')}</tr></thead><tbody><tr>`;
   for(let i=0;i<firstWd;i++) html+='<td style="border:1px solid var(--border)"></td>';
   for(let d=1;d<=lastDay;d++){
-    const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const date=dstr(d);
     const t=CAL_TYPES.find(x=>x.key===calType(date))||CAL_TYPES[0];
     const wd=new Date(y,m-1,d).getDay();
-    html+=`<td onclick="calToggle('${date}')" title="${t.label}"
-      style="border:1px solid var(--border);padding:5px 3px;text-align:center;cursor:pointer;background:${t.bg};user-select:none">
-      <div style="font-size:13px;font-weight:600;color:${t.key?t.color:(wd===0?'#dc2626':wd===6?'#2563eb':'var(--text)')}">${d}</div>
-      <div style="font-size:9px;color:${t.color}">${t.key?t.label:''}</div>
+    html+=`<td onclick="calToggle('${date}')" title="${date}　${t.label}"
+      style="border:1px solid var(--border);padding:3px 1px;text-align:center;cursor:pointer;background:${t.bg};user-select:none">
+      <div style="font-size:12px;font-weight:600;color:${t.key?t.color:(wd===0?'#dc2626':wd===6?'#2563eb':'var(--text)')}">${d}</div>
     </td>`;
     if((firstWd+d)%7===0&&d<lastDay) html+='</tr><tr>';
   }
   html+='</tr></tbody></table>';
-  const cnt=k=>{let n=0;for(let d=1;d<=lastDay;d++){const dt=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;if(calType(dt)===k)n++;}return n;};
-  html+=`<p style="font-size:11px;color:var(--text2);margin-top:8px">
-    稼働日 ${lastDay-cnt('houtei')-cnt('gai')}日／法定休日 <b style="color:#dc2626">${cnt('houtei')}日</b>／法定外休日 <b style="color:#2563eb">${cnt('gai')}日</b></p>`;
-  area.innerHTML=html;
+  let ho=0,ga=0;
+  for(let d=1;d<=lastDay;d++){const t=calType(dstr(d));if(t==='houtei')ho++;else if(t==='gai')ga++;}
+  html+=`<div style="font-size:10px;color:var(--text2);margin-top:4px">
+    稼働 ${lastDay-ho-ga}日／<span style="color:#dc2626">法定 ${ho}</span>／<span style="color:#2563eb">法定外 ${ga}</span></div></div>`;
+  return html;
+}
+
+function renderCompanyCal(){
+  const area=document.getElementById('cal-area');
+  if(!area)return;
+  const view=document.getElementById('cal-view')?.value||'nendo';
+  // 表示切替（年月 or 年度）
+  const mw=document.getElementById('cal-month-wrap'), nw=document.getElementById('cal-nendo-wrap');
+  if(mw) mw.style.display=(view==='month')?'':'none';
+  if(nw) nw.style.display=(view==='nendo')?'':'none';
+
+  const targets=calTargetMonths();
+  if(targets.length===0){area.innerHTML='';return;}
+
+  if(view==='month'){
+    area.innerHTML=`<div style="max-width:420px">${calMonthHtml(targets[0].y,targets[0].m)}</div>`;
+    return;
+  }
+  // 年度：12か月を並べて表示
+  const nendo=parseInt(document.getElementById('cal-nendo')?.value||currentNendo());
+  let ho=0,ga=0,total=0;
+  targets.forEach(({y,m})=>{
+    const last=new Date(y,m,0).getDate();
+    total+=last;
+    for(let d=1;d<=last;d++){
+      const t=calType(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+      if(t==='houtei')ho++; else if(t==='gai')ga++;
+    }
+  });
+  area.innerHTML=`
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
+      <b>${nendo}年度</b>（${nendo}/4〜${nendo+1}/3）　稼働 ${total-ho-ga}日／
+      <b style="color:#dc2626">法定休日 ${ho}日</b>／<b style="color:#2563eb">法定外休日 ${ga}日</b>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+      ${targets.map(({y,m})=>calMonthHtml(y,m)).join('')}
+    </div>`;
 }
 
 function calToggle(date){
@@ -8254,35 +8337,197 @@ function calToggle(date){
   saveDB();renderCompanyCal();
 }
 
-// 土日を一括設定（日=法定休日、土=法定外休日）
+// 土日を一括設定（日=法定休日、土=法定外休日）／表示中の範囲すべてに適用
 function calAutoWeekend(){
-  const ym=document.getElementById('cal-month')?.value;
-  if(!ym)return;
-  const [y,m]=ym.split('-').map(Number);
-  const lastDay=new Date(y,m,0).getDate();
+  const targets=calTargetMonths();
+  if(targets.length===0)return;
+  const view=document.getElementById('cal-view')?.value||'nendo';
+  if(view==='nendo'&&!confirm('この年度（12か月分）の土日をまとめて休日に設定しますか？\n日曜＝法定休日／土曜＝法定外休日'))return;
   if(!DB.calendar) DB.calendar={};
   let n=0;
-  for(let d=1;d<=lastDay;d++){
-    const wd=new Date(y,m-1,d).getDay();
-    const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    if(wd===0){DB.calendar[date]='houtei';n++;}
-    else if(wd===6){DB.calendar[date]='gai';n++;}
-  }
+  targets.forEach(({y,m})=>{
+    const last=new Date(y,m,0).getDate();
+    for(let d=1;d<=last;d++){
+      const wd=new Date(y,m-1,d).getDay();
+      const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      if(wd===0){DB.calendar[date]='houtei';n++;}
+      else if(wd===6){DB.calendar[date]='gai';n++;}
+    }
+  });
   saveDB();renderCompanyCal();
   showStatus(`土日${n}日を休日に設定しました ✓（祝日や振替は個別にクリックで調整）`,'ok');
 }
 
 function calClearMonth(){
-  const ym=document.getElementById('cal-month')?.value;
-  if(!ym)return;
-  if(!confirm('この月の休日設定をすべて消して、全日を稼働日に戻しますか？'))return;
-  const [y,m]=ym.split('-').map(Number);
-  const lastDay=new Date(y,m,0).getDate();
-  for(let d=1;d<=lastDay;d++){
-    delete DB.calendar[`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`];
-  }
+  const targets=calTargetMonths();
+  if(targets.length===0)return;
+  const view=document.getElementById('cal-view')?.value||'nendo';
+  const label=view==='nendo'?'この年度（12か月分）':'この月';
+  if(!confirm(label+'の休日設定をすべて消して、全日を稼働日に戻しますか？'))return;
+  targets.forEach(({y,m})=>{
+    const last=new Date(y,m,0).getDate();
+    for(let d=1;d<=last;d++) delete DB.calendar[`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`];
+  });
   saveDB();renderCompanyCal();
-  showStatus('この月の休日設定をリセットしました','ok');
+  showStatus(label+'の休日設定をリセットしました','ok');
+}
+
+// ===== 年度サマリー（36協定の年間上限） =====
+// 年度：4月〜翌3月
+function currentNendo(){
+  const d=new Date();
+  return d.getMonth()+1>=4 ? d.getFullYear() : d.getFullYear()-1;
+}
+function initNendoSelect(){
+  const cur=currentNendo();
+  let html='';
+  for(let y=cur;y>=cur-3;y--) html+=`<option value="${y}">${y}年度（${y}/4〜${y+1}/3）</option>`;
+  const sel=document.getElementById('nendo-select');
+  if(sel) sel.innerHTML=html;
+  const cal=document.getElementById('cal-nendo');
+  if(cal) cal.innerHTML=html;
+}
+
+async function loadNendo(){
+  const nendo=parseInt(document.getElementById('nendo-select')?.value||0);
+  const statusEl=document.getElementById('nendo-status');
+  const area=document.getElementById('nendo-area');
+  if(!nendo)return;
+  const gasUrl=getSetting('gas-url');
+  if(!gasUrl){alert('GAS URLが設定されていません');return;}
+
+  // 4月〜翌3月の12か月
+  const months=[];
+  for(let i=0;i<12;i++){
+    const dt=new Date(nendo,3+i,1);
+    months.push(`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`);
+  }
+
+  statusEl.textContent='読み込み中...（12か月分）';
+  statusEl.style.color='var(--text3)';
+  const monthData={};
+  try{
+    for(const mm of months){
+      const res=await fetch(gasUrl+'?action=getMonthUchiawase&koujiId='+encodeURIComponent(currentKoujiId)+'&ym='+mm,{method:'GET',redirect:'follow'});
+      monthData[mm]=(JSON.parse(await res.text()).days)||{};
+    }
+  }catch(e){ statusEl.textContent='取得エラー: '+e.message; statusEl.style.color='var(--danger)'; return; }
+
+  // 氏名 → 月 → {ot, hol}
+  const people={};
+  months.forEach(mm=>{
+    const days=monthData[mm]||{};
+    const add=(name,kind,date,hours)=>{
+      if(!name||!hours)return;
+      if(!people[name]) people[name]={kind,months:{}};
+      if(!people[name].months[mm]) people[name].months[mm]={ot:0,hol:0,days:{}};
+      const M=people[name].months[mm];
+      M.days[date]=(M.days[date]||0)+hours;
+    };
+    Object.entries(days).forEach(([date,data])=>{
+      (data.s1Junkai||[]).forEach(w=>add(w.name,'作業員',date,parseFloat(w.hours)||0));
+      (data.sagyouBlocks||[]).forEach(b=>{
+        (b.companies||[]).forEach(co=>{ if(co.jisha)(co.workers||[]).forEach(w=>add(w.name,'作業員',date,parseFloat(w.hours)||0)); });
+        (b.kotsuCompanies||[]).forEach(co=>{ if(co.jisha)(co.workers||[]).forEach(w=>add(w.name,'作業員',date,parseFloat(w.hours)||0)); });
+      });
+      (data.kantoku||[]).forEach(k=>{ if(parseInt(k.ninzu)>0) add(k.name,'監督',date,parseFloat(k.hours)||0); });
+    });
+  });
+
+  // 月ごとに時間外・休日労働を確定
+  Object.values(people).forEach(p=>{
+    Object.values(p.months).forEach(M=>{
+      let ot=0,hol=0;
+      Object.entries(M.days).forEach(([date,h])=>{
+        if(h<=0)return;
+        if(isHouteiKyujitsu(date)) hol+=h;
+        else if(h>ZANGYO_BASE_H) ot+=h-ZANGYO_BASE_H;
+      });
+      M.ot=Math.round(ot*10)/10; M.hol=Math.round(hol*10)/10;
+    });
+  });
+
+  const names=Object.keys(people);
+  if(names.length===0){
+    area.innerHTML='<p style="font-size:13px;color:var(--text3);padding:12px">この年度のデータがありません。</p>';
+    statusEl.textContent=''; return;
+  }
+
+  const rows=names.map(name=>{
+    const p=people[name];
+    let otY=0,holY=0,over45=0;
+    const cells=months.map(mm=>{
+      const M=p.months[mm];
+      const ot=M?M.ot:0, hol=M?M.hol:0;
+      otY+=ot; holY+=hol;
+      if(ot>45) over45++;
+      return {ot,hol};
+    });
+    otY=Math.round(otY*10)/10; holY=Math.round(holY*10)/10;
+    const warn=[];
+    if(otY>360) warn.push('年360h超');
+    if(over45>6) warn.push('45h超が年'+over45+'回');
+    return {name,kind:p.kind,cells,otY,holY,over45,warn};
+  }).sort((a,b)=> b.warn.length-a.warn.length || b.otY-a.otY || a.name.localeCompare(b.name,'ja'));
+
+  const alerts=rows.filter(r=>r.warn.length>0);
+  let html='';
+  if(alerts.length>0){
+    html+=`<div style="border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:8px;padding:10px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--danger);margin-bottom:6px">⚠️ 年間上限に注意が必要な方：${alerts.length}名</div>
+      ${alerts.map(r=>`<div style="font-size:12px">・<b>${r.name}</b>　${r.warn.join('／')}
+        <span style="color:var(--text2)">（年間時間外 ${r.otY.toFixed(1)}h・45h超 ${r.over45}回）</span></div>`).join('')}
+    </div>`;
+  }else{
+    html+=`<div style="border:1px solid rgba(22,163,74,0.35);background:rgba(22,163,74,0.08);border-radius:8px;padding:8px 10px;margin-bottom:12px;font-size:12px;color:var(--accent2);font-weight:600">
+      ✓ 年間上限（年360時間・45時間超は年6回まで）を超える方はいません</div>`;
+  }
+
+  let head='<th>氏名</th><th>区分</th>';
+  months.forEach(mm=>{ head+=`<th style="font-size:10px">${parseInt(mm.split('-')[1])}月</th>`; });
+  head+='<th>年間<br>時間外</th><th>年間<br>休日労働</th><th>45h超<br>回数</th><th>判定</th>';
+
+  html+=`<table class="zangyo-table"><thead><tr>${head}</tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const ng=r.warn.length>0;
+    html+=`<tr${ng?' style="background:rgba(239,68,68,0.05)"':''}>
+      <td style="font-weight:600;white-space:nowrap">${r.name}</td>
+      <td style="text-align:center;font-size:11px;color:var(--text2)">${r.kind}</td>`;
+    r.cells.forEach(c=>{
+      const over=c.ot>45;
+      html+=`<td style="text-align:center;font-size:11px;${over?'color:var(--danger);font-weight:700;background:rgba(239,68,68,0.1)':'color:var(--text2)'}">${c.ot>0?c.ot.toFixed(1):''}</td>`;
+    });
+    html+=`<td style="text-align:center;font-weight:700;color:${r.otY>360?'var(--danger)':'var(--text)'}">${r.otY.toFixed(1)}</td>
+      <td style="text-align:center;color:${r.holY>0?'#dc2626':'var(--text3)'}">${r.holY>0?r.holY.toFixed(1):'—'}</td>
+      <td style="text-align:center;font-weight:700;color:${r.over45>6?'var(--danger)':r.over45>0?'#d97706':'var(--text3)'}">${r.over45}</td>
+      <td style="text-align:center;font-size:10px;font-weight:700;color:${ng?'var(--danger)':'var(--accent2)'};white-space:nowrap">${ng?r.warn.join('<br>'):'OK'}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table>
+  <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.7">
+    <b>年間上限</b>：時間外 年360時間／月45時間を超えられるのは年6回まで<br>
+    <span style="color:var(--text3)">※赤いセル＝その月の時間外が45時間を超えた月です。</span>
+  </div>`;
+
+  area.innerHTML=html;
+  window._nendoRows=rows;
+  window._nendoMonths=months;
+  window._nendoYear=nendo;
+  statusEl.textContent=`${nendo}年度：${rows.length}名`+(alerts.length?`／⚠ 要注意 ${alerts.length}名`:'／上限内');
+  statusEl.style.color=alerts.length?'var(--danger)':'var(--accent2)';
+}
+
+function copyNendoCsv(){
+  const rows=window._nendoRows||[];
+  if(!rows.length){alert('先に「📊 年度集計」を実行してください');return;}
+  const months=window._nendoMonths||[];
+  const lines=['氏名,区分,'+months.map(m=>parseInt(m.split('-')[1])+'月').join(',')+',年間時間外,年間休日労働,45h超回数,判定'];
+  rows.forEach(r=>{
+    lines.push(`${r.name},${r.kind},`+r.cells.map(c=>c.ot.toFixed(1)).join(',')+
+      `,${r.otY.toFixed(1)},${r.holY.toFixed(1)},${r.over45},${r.warn.length?r.warn.join('／'):'OK'}`);
+  });
+  const txt=lines.join('\n');
+  navigator.clipboard.writeText(txt).then(()=>showStatus('年度CSVをコピーしました ✓','ok')).catch(()=>alert(txt));
 }
 
 // ===== 個人別 残業集計（月次） =====
@@ -10233,9 +10478,11 @@ function init(){
   // 残業集計の年月初期値（今月）
   const zm=document.getElementById('zangyo-month');
   if(zm)zm.value=today.slice(0,7);
-  // 会社カレンダーの年月初期値（今月）
+  // 年度セレクトを初期化してから会社カレンダーを描画
+  initNendoSelect();
   const cm=document.getElementById('cal-month');
-  if(cm){cm.value=today.slice(0,7);renderCompanyCal();}
+  if(cm)cm.value=today.slice(0,7);
+  renderCompanyCal();
   // 就業時間の設定が壊れていたら既定値に戻す（1899-... などの異常値対策）
   ['work-start','work-end'].forEach(k=>{
     const v=getSetting(k);
