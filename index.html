@@ -3813,11 +3813,26 @@ function onCoChange(sel,rid){
           <select class="role-sel" onclick="event.stopPropagation()" onchange="event.stopPropagation()">
             ${(getRoleOptions(getEffectiveUkeoi(j))||[]).map(o=>`<option value="${o.value}"${j.role===o.value?' selected':''}>${o.label}</option>`).join('')}
           </select>
-          <input class="hours-inp" type="number" placeholder="h" step="0.5" min="0" style="width:42px"
-            value="${getSetting('bulk-hours')||8}" oninput="calcTotals()" onclick="event.stopPropagation()">
-          <span style="font-size:10px;color:var(--text3)">h</span>
+          <span class="time-range" onclick="event.stopPropagation()">
+            <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${WORK_START_DEF}" oninput="onWorkTimeChange(this)">
+            <span class="tr-sep">〜</span>
+            <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${WORK_END_DEF}" oninput="onWorkTimeChange(this)">
+            <input class="hours-inp" type="number" step="0.5" min="0" title="実働時間（自動計算・手入力可）"
+              value="${calcWorkHours(WORK_START_DEF,WORK_END_DEF)}" oninput="calcTotals()">
+            <span class="tr-h">h</span>
+          </span>
         </label>`;
-      let html='';
+      // この会社の全員に就業時間を一括設定するバー
+      let html=`<div class="bulk-time-bar" style="flex:0 0 100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;padding:6px 8px;background:rgba(59,130,246,0.06);border:1px solid var(--border);border-radius:6px">
+        <span style="font-size:11px;font-weight:600;color:var(--accent3)">⏱️ 就業時間を一括設定</span>
+        <span class="time-range">
+          <input class="bulk-start" type="text" inputmode="numeric" placeholder="8" value="${WORK_START_DEF}">
+          <span class="tr-sep">〜</span>
+          <input class="bulk-end" type="text" inputmode="numeric" placeholder="17" value="${WORK_END_DEF}">
+        </span>
+        <button type="button" class="btn btn-blue btn-sm" style="font-size:10px;padding:3px 10px" onclick="applyBulkTime(this)">全員に反映</button>
+        <span style="font-size:10px;color:var(--text3)">※違う人は個別に修正できます</span>
+      </div>`;
       sortedHans.forEach(han=>{
         const label=han==='未設定'?'未設定':han+'班';
         const hanColor=han==='1'?'#16a34a':han==='2'?'#2563eb':han==='3'?'#d97706':'#888';
@@ -3851,6 +3866,30 @@ function selectHanAll(btn,checked){
 }
 
 // ===== 一括時間 =====
+// 作業ブロック（会社）内の全作業員に就業時間を反映
+function applyBulkTime(btn){
+  const bar=btn.closest('.bulk-time-bar');
+  const wrap=btn.closest('[id$="-jisha"]');
+  if(!bar||!wrap)return;
+  const st=bar.querySelector('.bulk-start')?.value||'';
+  const en=bar.querySelector('.bulk-end')?.value||'';
+  const h=calcWorkHours(st,en);
+  if(h===''){alert('開始・終了時刻を正しく入力してください（例：8 と 17）');return;}
+  let n=0;
+  wrap.querySelectorAll('.worker-chip .time-range').forEach(tr=>{
+    const s=tr.querySelector('.time-start'), e=tr.querySelector('.time-end'), hi=tr.querySelector('.hours-inp');
+    if(s)s.value=st;
+    if(e)e.value=en;
+    if(hi)hi.value=h;
+    n++;
+  });
+  // 既定値として記憶（次回以降の初期値になる）
+  saveSetting('work-start',st);
+  saveSetting('work-end',en);
+  calcTotals();markUnsaved();
+  showStatus(`${n}名に ${st}〜${en}（${h}h）を反映しました ✓`,'ok');
+}
+
 function applyBulkHours(){
   const v=document.getElementById('bulk-hours').value;saveSetting('bulk-hours',v);
   document.querySelectorAll('#jisha-worker-list .hours-inp').forEach(inp=>inp.value=v);calcTotals();
@@ -5663,7 +5702,9 @@ function collectUchiawaseSnapshot(){
             const n=chip.querySelector('.chip-name');
             const h=chip.querySelector('.hours-inp');
             const r=chip.querySelector('.role-sel');
-            co.workers.push({name:n?.textContent.trim()||'',hours:parseFloat(h?.value||0)||0,role:r?.value||''});
+            const st=chip.querySelector('.time-start');
+            const en=chip.querySelector('.time-end');
+            co.workers.push({name:n?.textContent.trim()||'',hours:parseFloat(h?.value||0)||0,role:r?.value||'',start:st?.value||'',end:en?.value||''});
             snap.totalH+=parseFloat(h?.value||0)||0;
           }
         });
@@ -6007,7 +6048,11 @@ function restoreUchiawase(snap){
                         const cb=chip.querySelector('input[type=checkbox]');
                         const hInp=chip.querySelector('.hours-inp');
                         const rSel=chip.querySelector('.role-sel');
+                        const stI=chip.querySelector('.time-start');
+                        const enI=chip.querySelector('.time-end');
                         if(cb){cb.checked=true;chip.classList.add('selected');}
+                        if(stI&&workerData.start) stI.value=workerData.start;
+                        if(enI&&workerData.end) enI.value=workerData.end;
                         if(hInp) hInp.value=workerData.hours||8;
                         if(rSel&&workerData.role) rSel.value=workerData.role;
                       }
