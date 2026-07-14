@@ -285,6 +285,15 @@ textarea.autogrow{overflow:hidden;}
 .kagaku-block{margin-top:8px;border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px;background:rgba(239,68,68,0.04);}
 .kagaku-block.hidden{display:none;}
 .kagaku-title{font-size:11px;font-weight:600;color:var(--danger);margin-bottom:10px;}
+/* 打合せ簿／日報 モード切り替え */
+.mode-btn{padding:4px 12px;font-size:12px;font-weight:700;background:var(--bg2);color:var(--text2);border:none;cursor:pointer;transition:all 0.12s;}
+.mode-btn+.mode-btn{border-left:1px solid var(--border);}
+.mode-btn.active{background:var(--accent);color:#fff;}
+/* モードに応じた表示切り替え（既定＝打合せ簿モード） */
+.nippou-only{display:none;}
+body.mode-nippou .nippou-only{display:block;}
+body.mode-nippou .nippou-only-flex{display:flex;}
+body.mode-nippou .uchiawase-only{display:none;}
 /* 残業集計テーブル */
 .zangyo-table{width:100%;border-collapse:collapse;font-size:12px;}
 .zangyo-table th{background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;padding:4px 5px;border:1px solid var(--border);white-space:nowrap;}
@@ -482,7 +491,11 @@ textarea.autogrow{overflow:hidden;}
 
   <div class="card">
     <div class="card-title">
-      📅 基本情報
+      <span id="uchiawase-mode-label">📅 基本情報</span>
+      <div style="display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-left:8px">
+        <button type="button" id="mode-uchiawase" class="mode-btn active" onclick="setReportMode('uchiawase')">📋 打合せ簿</button>
+        <button type="button" id="mode-nippou" class="mode-btn" onclick="setReportMode('nippou')">📝 日報</button>
+      </div>
       <div class="ml">
         <button class="btn btn-ghost btn-sm" onclick="showInheritDialog()">📥 指定日から引き継ぎ</button>
         <button class="btn btn-ghost btn-sm" onclick="clearUchiawaseConfirm()">📄 白紙にする</button>
@@ -498,8 +511,8 @@ textarea.autogrow{overflow:hidden;}
       <div class="fg w-quarter"><label>天気 <span id="tenki-emoji" style="font-size:16px"></span></label>
         <select id="tenki" onchange="updateTenkiColor()"><option value="">📡 気象取得してください</option><option>快晴</option><option>晴れ</option><option>晴れ時々曇り</option><option>曇り時々晴れ</option><option>曇り</option><option>曇り時々雨</option><option>雨</option><option>雪</option><option>雷雨</option></select>
       </div>
-      <div class="fg w-quarter"><label>予想最高気温 (℃) <span id="kion-emoji" style="font-size:14px"></span></label><input type="number" id="kion" placeholder="📡 気象取得" oninput="updateHeatKyDisplay();updateKionColor();refreshWbgtCardForDate()"></div>
-      <div class="fg w-quarter"><label>予想最低気温 (℃)</label><input type="number" id="kion-min" placeholder="📡 気象取得"></div>
+      <div class="fg w-quarter"><label><span class="kion-label-text">予想最高気温</span> (℃) <span id="kion-emoji" style="font-size:14px"></span></label><input type="number" id="kion" placeholder="📡 気象取得" oninput="updateHeatKyDisplay();updateKionColor();refreshWbgtCardForDate()"></div>
+      <div class="fg w-quarter"><label><span class="kionmin-label-text">予想最低気温</span> (℃)</label><input type="number" id="kion-min" placeholder="📡 気象取得"></div>
       <div class="fg" style="padding-top:18px">
         <label style="font-size:10px;color:var(--text3)">🌤 気象取得</label>
         <div style="display:flex;gap:4px">
@@ -578,6 +591,23 @@ textarea.autogrow{overflow:hidden;}
 </div><!-- /col-left -->
 
 <div class="col-right">
+
+  <!-- 日報：本日の実績・所感（日報モードのみ表示） -->
+  <div class="card nippou-only">
+    <div class="card-title">📝 本日の作業実績・所感</div>
+    <div class="form-row">
+      <div class="fg w-full">
+        <label>実際に行った作業・出来高・数量</label>
+        <textarea id="nippou-jisseki" class="autogrow" oninput="autoGrowTa(this);markUnsaved()" placeholder="例）R191 KP12.3〜13.0 区画線設置 350m 完了　／　側溝清掃 A工区 80m"></textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="fg w-full">
+        <label>特記事項・所感（トラブル・遅れ・気づき・翌日への申し送り）</label>
+        <textarea id="nippou-shokan" class="autogrow" oninput="autoGrowTa(this);markUnsaved()" placeholder="例）午後から降雨のため塗装作業を中止。翌日順延。　／　資材の追加手配が必要"></textarea>
+      </div>
+    </div>
+  </div>
 
   <!-- 監理技術者・現場代理人 サイン -->
   <div class="kantoku-sign-area">
@@ -3535,6 +3565,7 @@ function clearUchiawase(){
   document.getElementById('tenki').value='晴れ';
   document.getElementById('kion').value='';
   document.getElementById('renraku').value='';
+  ['nippou-jisseki','nippou-shokan'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const s1=document.getElementById('s1-shiki');if(s1)s1.value='';
   sagyouIds.forEach(id=>document.getElementById('card-'+id)?.remove());
   sagyouIds=[];
@@ -5779,6 +5810,9 @@ function collectUchiawaseSnapshot(){
     kionMin:document.getElementById('kion-min')?.value||'',
     chiku:getChiku(date),
     renraku:document.getElementById('renraku').value||'',
+    reportMode:getReportMode(),
+    nippouJisseki:document.getElementById('nippou-jisseki')?.value||'',
+    nippouShokan:document.getElementById('nippou-shokan')?.value||'',
     // 作業1のAI・手書き安全指示
     s1Ai:(document.getElementById('s1-ai')?.innerText||'').trim(),
     s1Tegaki:document.getElementById('s1-tegaki')?.value||'',
@@ -6044,6 +6078,11 @@ function restoreUchiawase(snap){
   set('kion-min',snap.kionMin||'');
   set('renraku',snap.renraku||'');
   autoGrowTa(document.getElementById('renraku'));
+  // 日報項目の復元
+  const njEl=document.getElementById('nippou-jisseki');
+  if(njEl){njEl.value=snap.nippouJisseki||'';autoGrowTa(njEl);}
+  const nsEl=document.getElementById('nippou-shokan');
+  if(nsEl){nsEl.value=snap.nippouShokan||'';autoGrowTa(nsEl);}
   // 天気・気温の絵文字・色を更新
   updateTenkiColor();updateKionColor();updateHeatKyDisplay();
   // WBGT復元：本日以外はその日の気温から推定、本日は保存時の記録値を再表示
@@ -8008,6 +8047,25 @@ function updateTwoColBtn(){
   btn.textContent=on?'📄 1列':'🔳 3列';
   btn.style.opacity=on?'1':'0.75';
 }
+
+// ===== 打合せ簿／日報 モード切り替え =====
+// 同じ日付データを共有し、朝＝打合せ簿、夕＝日報として仕上げる
+function setReportMode(mode){
+  const isNippou=(mode==='nippou');
+  document.body.classList.toggle('mode-nippou',isNippou);
+  const mu=document.getElementById('mode-uchiawase'), mn=document.getElementById('mode-nippou');
+  if(mu)mu.classList.toggle('active',!isNippou);
+  if(mn)mn.classList.toggle('active',isNippou);
+  const lbl=document.getElementById('uchiawase-mode-label');
+  if(lbl)lbl.textContent=isNippou?'📝 作業日報':'📅 基本情報';
+  // 気温ラベルを予想⇔実績で切り替え
+  const kionLabel=document.querySelector('label[for-kion]');
+  document.querySelectorAll('.kion-label-text').forEach(el=>el.textContent=isNippou?'最高気温':'予想最高気温');
+  document.querySelectorAll('.kionmin-label-text').forEach(el=>el.textContent=isNippou?'最低気温':'予想最低気温');
+  localStorage.setItem('anzen_report_mode',mode);
+  saveSetting('report-mode',mode);
+}
+function getReportMode(){ return document.body.classList.contains('mode-nippou')?'nippou':'uchiawase'; }
 
 function toggleTheme(){
   const isLight=document.body.classList.toggle('light-theme');
@@ -10841,6 +10899,8 @@ function init(){
   // 3列レイアウトの設定を復元
   if(localStorage.getItem('anzen_threecol')==='1') document.body.classList.add('three-col');
   updateTwoColBtn();
+  // 打合せ簿／日報モードを復元
+  setReportMode(localStorage.getItem('anzen_report_mode')||'uchiawase');
   // 残業集計の年月初期値（今月）
   const zm=document.getElementById('zangyo-month');
   if(zm)zm.value=today.slice(0,7);
