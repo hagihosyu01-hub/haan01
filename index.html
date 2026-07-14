@@ -3618,13 +3618,13 @@ function renderJimuinSelects(){
             ${chipRoleOpts(j)}
           </select>
           <span class="time-range" onclick="event.stopPropagation()">
-            <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getSetting('work-start')||WORK_START_DEF}"
+            <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getWorkStart()}"
               oninput="onWorkTimeChange(this)">
             <span class="tr-sep">〜</span>
-            <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${getSetting('work-end')||WORK_END_DEF}"
+            <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${getWorkEnd()}"
               oninput="onWorkTimeChange(this)">
             <input class="hours-inp" type="number" step="0.5" min="0" title="実働時間（自動計算・手入力可）"
-              value="${calcWorkHours(getSetting('work-start')||WORK_START_DEF,getSetting('work-end')||WORK_END_DEF)}"
+              value="${calcWorkHours(getWorkStart(),getWorkEnd())}"
               oninput="this.dataset.auto='';calcTotals()">
             <span class="tr-h">h</span>
           </span>
@@ -3639,13 +3639,13 @@ function renderJimuinSelects(){
         <div style="min-width:90px;font-size:11px;color:var(--text2)">${ROLE_MAP[k.role]}</div>
         <div style="font-size:13px;font-weight:500;flex:1">${k.name}</div>
         <div class="fg" style="max-width:70px"><label>人数</label><input type="number" class="kantoku-ninzu" value="1" min="0" style="padding:4px 7px" oninput="calcTotals()"></div>
-        <div class="fg" style="max-width:170px"><label>就業時間</label>
+        <div class="fg" style="max-width:200px;flex:0 0 200px"><label>就業時間</label>
           <span class="time-range">
-            <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getSetting('work-start')||WORK_START_DEF}" oninput="onWorkTimeChange(this)">
+            <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getWorkStart()}" oninput="onWorkTimeChange(this)">
             <span class="tr-sep">〜</span>
-            <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${getSetting('work-end')||WORK_END_DEF}" oninput="onWorkTimeChange(this)">
+            <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${getWorkEnd()}" oninput="onWorkTimeChange(this)">
             <input class="hours-inp kantoku-hours" type="number" step="0.5" min="0" title="実働時間（自動計算・手入力可）"
-              value="${calcWorkHours(getSetting('work-start')||WORK_START_DEF,getSetting('work-end')||WORK_END_DEF)}"
+              value="${calcWorkHours(getWorkStart(),getWorkEnd())}"
               oninput="calcTotals()">
             <span class="tr-h">h</span>
           </span>
@@ -5296,8 +5296,8 @@ function doLoadYesterdayFrom(sourceDate){
                         const stI=chip.querySelector('.time-start');
                         const enI=chip.querySelector('.time-end');
                         if(cb){cb.checked=true;chip.classList.add('selected');}
-                        if(stI&&workerData.start) stI.value=workerData.start;
-                        if(enI&&workerData.end) enI.value=workerData.end;
+                        if(stI&&workerData.start&&!isNaN(parseHM(workerData.start))) stI.value=workerData.start;
+                        if(enI&&workerData.end&&!isNaN(parseHM(workerData.end))) enI.value=workerData.end;
                         if(hInp) hInp.value=workerData.hours||8;
                       }
                     });
@@ -5916,8 +5916,8 @@ function restoreUchiawase(snap){
         if(kd){
           const ni=row.querySelector('.kantoku-ninzu');if(ni)ni.value=kd.ninzu;
           const hi=row.querySelector('.kantoku-hours');if(hi)hi.value=kd.hours;
-          const st=row.querySelector('.time-start');if(st&&kd.start)st.value=kd.start;
-          const en=row.querySelector('.time-end');if(en&&kd.end)en.value=kd.end;
+          const st=row.querySelector('.time-start');if(st&&kd.start&&!isNaN(parseHM(kd.start)))st.value=kd.start;
+          const en=row.querySelector('.time-end');if(en&&kd.end&&!isNaN(parseHM(kd.end)))en.value=kd.end;
         }
       });
       calcTotals();
@@ -6061,8 +6061,8 @@ function restoreUchiawase(snap){
                         const stI=chip.querySelector('.time-start');
                         const enI=chip.querySelector('.time-end');
                         if(cb){cb.checked=true;chip.classList.add('selected');}
-                        if(stI&&workerData.start) stI.value=workerData.start;
-                        if(enI&&workerData.end) enI.value=workerData.end;
+                        if(stI&&workerData.start&&!isNaN(parseHM(workerData.start))) stI.value=workerData.start;
+                        if(enI&&workerData.end&&!isNaN(parseHM(workerData.end))) enI.value=workerData.end;
                         if(hInp) hInp.value=workerData.hours||8;
                         if(rSel&&workerData.role) rSel.value=workerData.role;
                       }
@@ -9961,6 +9961,16 @@ function calcWorkHours(start,end){
   if(d>6) d-=WORK_BREAK_H;             // 半日勤務(拘束6h以下)は休憩を引かない
   return Math.round(d*2)/2;
 }
+// 設定に保存された就業時間を取得（不正な値は既定値にフォールバック）
+function getWorkStart(){
+  const v=getSetting('work-start');
+  return (v&&!isNaN(parseHM(v)))?String(v):WORK_START_DEF;
+}
+function getWorkEnd(){
+  const v=getSetting('work-end');
+  return (v&&!isNaN(parseHM(v)))?String(v):WORK_END_DEF;
+}
+
 // 開始/終了の入力欄が変わったら、時間欄を自動更新（手入力も可）
 function onWorkTimeChange(el){
   const wrap=el.closest('.time-range');
@@ -10009,6 +10019,13 @@ function init(){
   // 残業集計の年月初期値（今月）
   const zm=document.getElementById('zangyo-month');
   if(zm)zm.value=today.slice(0,7);
+  // 就業時間の設定が壊れていたら既定値に戻す（1899-... などの異常値対策）
+  ['work-start','work-end'].forEach(k=>{
+    const v=getSetting(k);
+    if(v!==undefined&&v!==null&&v!==''&&isNaN(parseHM(v))){
+      saveSetting(k, k==='work-start'?WORK_START_DEF:WORK_END_DEF);
+    }
+  });
   // 使い方ヘルプの初期化
   initHelp();
   // 体調チェックフォームQRの初期化
