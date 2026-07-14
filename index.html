@@ -84,28 +84,33 @@ body{font-family:'Hiragino Sans','Meiryo',sans-serif;background:var(--bg);color:
   .fg.w-third{flex:0 1 320px;}
   .fg.w-half{flex:0 1 480px;}
 }
-/* ===== B案：広い画面で2列レイアウト（body.two-col のときだけ有効） ===== */
+/* ===== 3列レイアウト（body.three-col のときだけ有効） ===== */
 @media(min-width:1000px){
-  /* 左右を独立した列として流す（高さが揃わなくても空白ができない） */
-  body.two-col #sec-uchiawase.active{
-    display:flex !important;
-    align-items:flex-start;
+  body.three-col #sec-uchiawase.active{
+    display:grid !important;
+    grid-template-columns: repeat(3, minmax(0,1fr));
     gap:12px;
+    align-items:start;
   }
-  body.two-col #sec-uchiawase > .col-left{flex:1.35 1 0;min-width:0;}
-  body.two-col #sec-uchiawase > .col-right{flex:1 1 0;min-width:0;}
-  /* 2列時は列幅が狭くなるため、各欄を詰めて収まるようにする */
-  body.two-col #sec-uchiawase .fg.w-quarter{flex:0 1 calc(50% - 6px);}
-  body.two-col #sec-uchiawase .fg.w-third{flex:0 1 calc(50% - 6px);}
-  body.two-col #sec-uchiawase .fg.w-half{flex:0 1 100%;}
-  body.two-col #sec-uchiawase .card{padding:12px;}
-  body.two-col #sec-uchiawase .kagaku-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));}
+  /* 並び順を order で制御：基本情報→監理サイン→人員→作業1→作業2…→作業追加→資材 */
+  body.three-col #sec-uchiawase.active > .col-left > div:nth-of-type(1){order:1;}   /* 基本情報 */
+  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(1){order:2;}  /* 監理サイン */
+  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(3){order:3;}  /* 人員集計 */
+  body.three-col #sec-uchiawase.active > .col-left > div:nth-of-type(2){order:4;}   /* 作業1 */
+  body.three-col #sec-uchiawase.active #sagyou-dynamic{display:contents;}            /* 作業2〜を個別の列に */
+  body.three-col #sec-uchiawase.active #sagyou-dynamic > .card{order:5;}            /* 作業2〜（段落ちで横3列に流れる） */
+  body.three-col #sec-uchiawase.active > .col-left > button{order:6;}               /* 作業を追加 */
+  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(2){order:7;}  /* 資材搬入 */
+
+  /* 3列時は列幅が狭いので各欄を1列に詰める */
+  body.three-col #sec-uchiawase .fg.w-quarter,
+  body.three-col #sec-uchiawase .fg.w-third,
+  body.three-col #sec-uchiawase .fg.w-half{flex:0 1 100%;}
+  body.three-col #sec-uchiawase .card{padding:11px;}
+  body.three-col #sec-uchiawase .kagaku-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));}
+  body.three-col #sec-uchiawase .form-row{gap:6px;}
 }
-/* 1列表示のときは、囲いを透過させて元の見た目のまま */
 .col-left,.col-right{display:contents;}
-@media(min-width:1000px){
-  body.two-col .col-left,body.two-col .col-right{display:block;}
-}
 .section{display:none;}.section.active{display:block;}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
 .card-title{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
@@ -396,7 +401,7 @@ textarea.autogrow{overflow:hidden;}
       <button class="btn btn-ghost btn-sm" onclick="openKoujiDialog()" style="font-size:11px">＋ 工事</button>
     </div>
     <span id="mode-badge" onclick="showModeDialog()" style="padding:3px 10px;border-radius:12px;font-size:11px;cursor:pointer;font-weight:600;margin-right:4px"></span>
-    <button id="twocol-toggle" onclick="toggleTwoCol()" title="広い画面で打合せ簿を2列表示にします">📐 2列</button>
+    <button id="twocol-toggle" onclick="toggleThreeCol()" title="広い画面で打合せ簿を3列表示にします">🔳 3列</button>
     <button id="theme-toggle" onclick="toggleTheme()">🌙 ダーク</button>
     <div class="api-wrap">
       <label>Gemini APIキー</label>
@@ -870,9 +875,27 @@ textarea.autogrow{overflow:hidden;}
     </p>
 
     <div class="form-row" style="align-items:flex-end;gap:8px;margin-bottom:10px">
+      <button class="btn btn-blue btn-sm" onclick="yukyuTargetOpen()">👥 対象者を選ぶ</button>
       <button class="btn btn-blue btn-sm" onclick="yukyuCarryOver()">↩️ 前年度の残りを繰越</button>
       <button class="btn btn-ghost btn-sm" onclick="yukyuPasteOpen()">📋 まとめて入力（貼り付け）</button>
       <div id="yukyu-status" style="font-size:12px;color:var(--text3)"></div>
+    </div>
+
+    <div id="yukyu-target-wrap" class="hidden" style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--bg2)">
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px">有給管理の対象者にチェック（監督・1班・2班・巡回など）</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="yukyuTargetPreset('kantoku')">監督を追加</button>
+        <button class="btn btn-ghost btn-sm" onclick="yukyuTargetPreset('1')">1班を追加</button>
+        <button class="btn btn-ghost btn-sm" onclick="yukyuTargetPreset('2')">2班を追加</button>
+        <button class="btn btn-ghost btn-sm" onclick="yukyuTargetPreset('junkai')">巡回を追加</button>
+        <button class="btn btn-ghost btn-sm" onclick="yukyuTargetAll(true)">全員</button>
+        <button class="btn btn-ghost btn-sm" onclick="yukyuTargetAll(false)">全解除</button>
+      </div>
+      <div id="yukyu-target-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;max-height:280px;overflow-y:auto"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-success btn-sm" onclick="yukyuTargetSave()">この対象で表示</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('yukyu-target-wrap').classList.add('hidden')">閉じる</button>
+      </div>
     </div>
 
     <div id="yukyu-paste-wrap" class="hidden" style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg2)">
@@ -7966,23 +7989,23 @@ async function saveNewKouji(){
 }
 
 // ===== テーマ切り替え =====
-// ===== 2列レイアウト（B案）の切り替え =====
-function toggleTwoCol(){
-  const on=!document.body.classList.contains('two-col');
-  document.body.classList.toggle('two-col',on);
-  localStorage.setItem('anzen_twocol',on?'1':'0');
+// ===== 3列レイアウトの切り替え =====
+function toggleThreeCol(){
+  const on=!document.body.classList.contains('three-col');
+  document.body.classList.toggle('three-col',on);
+  localStorage.setItem('anzen_threecol',on?'1':'0');
   updateTwoColBtn();
   if(on&&window.innerWidth<1000){
-    showStatus('2列表示は画面幅1000px以上で有効です（iPadは横向きに）','err');
+    showStatus('3列表示は画面幅1000px以上で有効です（iPadは横向きに）','err');
   }else{
-    showStatus(on?'2列表示にしました 📐':'1列表示に戻しました','ok');
+    showStatus(on?'3列表示にしました 🔳':'1列表示に戻しました','ok');
   }
 }
 function updateTwoColBtn(){
   const btn=document.getElementById('twocol-toggle');
   if(!btn)return;
-  const on=document.body.classList.contains('two-col');
-  btn.textContent=on?'📄 1列':'📐 2列';
+  const on=document.body.classList.contains('three-col');
+  btn.textContent=on?'📄 1列':'🔳 3列';
   btn.style.opacity=on?'1':'0.75';
 }
 
@@ -8422,7 +8445,18 @@ function calClearMonth(){
 }
 
 // ===== 有給休暇 残日数管理 =====
-// DB.yukyu[nendo] = { [氏名]: {carry:繰越, grant:付与, days:{ '2026-05-01':1 | 0.5 }} }
+// DB.yukyu[nendo] = { [氏名]: {carry, grant, days:{}} }
+// DB.settings['yukyu-targets'] = 対象にする氏名の配列（JSON）
+function yukyuTargets(){
+  try{ return JSON.parse(getSetting('yukyu-targets')||'[]'); }catch(e){ return []; }
+}
+function setYukyuTargets(arr){
+  saveSetting('yukyu-targets', JSON.stringify(arr));
+}
+function isYukyuTarget(name){
+  const t=yukyuTargets();
+  return t.length===0 ? false : t.includes(name);
+}
 function yukyuData(nendo){
   if(!DB.yukyu) DB.yukyu={};
   if(!DB.yukyu[nendo]) DB.yukyu[nendo]={};
@@ -8450,13 +8484,78 @@ function initYukyuNendo(){
   sel.innerHTML=html;
 }
 
+// ---- 対象者の選択 ----
+const YUKYU_KANTOKU_ROLES=['dairi','kanri','anzen'];  // 監督とみなす役割
+function jimuinRoles(j){ return String(j.role||'').split(',').map(s=>s.trim()).filter(Boolean); }
+// 氏名の区分タグ（監督／○班／巡回）
+function yukyuTag(j){
+  const roles=jimuinRoles(j);
+  if(roles.some(r=>YUKYU_KANTOKU_ROLES.includes(r))) return '監督';
+  if(roles.includes('junkai')||roles.includes('unten')) return '巡回';
+  if(j.han) return j.han+'班';
+  return '';
+}
+function yukyuTargetOpen(){
+  document.getElementById('yukyu-target-wrap').classList.toggle('hidden');
+  renderYukyuTargetList();
+}
+function renderYukyuTargetList(){
+  const box=document.getElementById('yukyu-target-list');
+  if(!box)return;
+  const sel=new Set(yukyuTargets());
+  const list=[...(DB.jimuin||[])].filter(j=>j.name);
+  box.innerHTML=list.map(j=>{
+    const roles=jimuinRoles(j);
+    let tag='';
+    if(roles.some(r=>YUKYU_KANTOKU_ROLES.includes(r))) tag='監督';
+    else if(roles.includes('junkai')||roles.includes('unten')) tag='巡回';
+    else if(j.han) tag=j.han+'班';
+    return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;background:var(--bg3);cursor:pointer">
+      <input type="checkbox" value="${j.name.replace(/"/g,'&quot;')}" ${sel.has(j.name)?'checked':''} style="accent-color:var(--accent)">
+      <span style="flex:1">${j.name}</span>
+      ${tag?`<span style="font-size:9px;color:var(--text3)">${tag}</span>`:''}
+    </label>`;
+  }).join('');
+}
+function yukyuTargetPreset(kind){
+  const box=document.getElementById('yukyu-target-list');
+  (DB.jimuin||[]).forEach(j=>{
+    if(!j.name)return;
+    const roles=jimuinRoles(j);
+    let hit=false;
+    if(kind==='kantoku') hit=roles.some(r=>YUKYU_KANTOKU_ROLES.includes(r));
+    else if(kind==='junkai') hit=roles.includes('junkai')||roles.includes('unten');
+    else hit=(j.han===kind);   // '1' や '2'
+    if(hit){
+      const cb=box.querySelector(`input[value="${CSS.escape(j.name)}"]`);
+      if(cb) cb.checked=true;
+    }
+  });
+}
+function yukyuTargetAll(on){
+  document.querySelectorAll('#yukyu-target-list input[type=checkbox]').forEach(cb=>cb.checked=on);
+}
+function yukyuTargetSave(){
+  const arr=[...document.querySelectorAll('#yukyu-target-list input:checked')].map(cb=>cb.value);
+  setYukyuTargets(arr);
+  document.getElementById('yukyu-target-wrap').classList.add('hidden');
+  renderYukyu();
+  showStatus(`有給管理の対象を ${arr.length}名 に設定しました ✓`,'ok');
+}
+
 function renderYukyu(){
   const area=document.getElementById('yukyu-area');
   const nendo=parseInt(document.getElementById('yukyu-nendo')?.value||currentNendo());
   if(!area)return;
-  const list=[...(DB.jimuin||[])].filter(j=>j.name);
+  const targets=yukyuTargets();
+  if(targets.length===0){
+    area.innerHTML='<p style="font-size:13px;color:var(--text3);padding:12px">まず「👥 対象者を選ぶ」で、有給管理する人（監督・1班・2班・巡回など）を選んでください。</p>';
+    refreshYukyuPersonSel();renderYukyuCal();
+    return;
+  }
+  const list=[...(DB.jimuin||[])].filter(j=>j.name&&targets.includes(j.name));
   if(list.length===0){
-    area.innerHTML='<p style="font-size:13px;color:var(--text3);padding:12px">人員マスタに従業員を登録してください。</p>';
+    area.innerHTML='<p style="font-size:13px;color:var(--text3);padding:12px">対象者が人員マスタに見つかりません。</p>';
     return;
   }
 
@@ -8473,7 +8572,7 @@ function renderYukyu(){
     const gimuOk=!gimu||used>=5;
     if(gimu&&!gimuOk) gimuNg++;
     html+=`<tr>
-      <td style="font-weight:600;white-space:nowrap">${j.name}</td>
+      <td style="font-weight:600;white-space:nowrap">${j.name}<span style="font-size:9px;color:var(--text3);margin-left:4px">${yukyuTag(j)}</span></td>
       <td style="text-align:center"><input type="number" step="0.5" min="0" value="${carry}" style="width:60px;text-align:center;padding:2px"
         onchange="yukyuSet('${j.name}','carry',this.value)"></td>
       <td style="text-align:center"><input type="number" step="0.5" min="0" value="${grant}" style="width:60px;text-align:center;padding:2px"
@@ -8567,8 +8666,10 @@ function refreshYukyuPersonSel(){
   const sel=document.getElementById('yukyu-person');
   if(!sel)return;
   const prev=sel.value;
+  const targets=yukyuTargets();
+  const list=(DB.jimuin||[]).filter(j=>j.name&&(targets.length===0?false:targets.includes(j.name)));
   sel.innerHTML='<option value="">人を選択してください</option>'+
-    (DB.jimuin||[]).filter(j=>j.name).map(j=>`<option value="${j.name}">${j.name}</option>`).join('');
+    list.map(j=>`<option value="${j.name}">${j.name}</option>`).join('');
   if(prev) sel.value=prev;
 }
 
@@ -10737,8 +10838,8 @@ function init(){
   // 月間実施表の年月初期値（今月）
   const jm=document.getElementById('jisshi-month');
   if(jm)jm.value=today.slice(0,7);
-  // 2列レイアウトの設定を復元
-  if(localStorage.getItem('anzen_twocol')==='1') document.body.classList.add('two-col');
+  // 3列レイアウトの設定を復元
+  if(localStorage.getItem('anzen_threecol')==='1') document.body.classList.add('three-col');
   updateTwoColBtn();
   // 残業集計の年月初期値（今月）
   const zm=document.getElementById('zangyo-month');
