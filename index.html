@@ -248,6 +248,19 @@ textarea.autogrow{overflow:hidden;}
 .kagaku-block{margin-top:8px;border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px;background:rgba(239,68,68,0.04);}
 .kagaku-block.hidden{display:none;}
 .kagaku-title{font-size:11px;font-weight:600;color:var(--danger);margin-bottom:10px;}
+/* 残業集計テーブル */
+.zangyo-table{width:100%;border-collapse:collapse;font-size:12px;}
+.zangyo-table th{background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;padding:4px 5px;border:1px solid var(--border);white-space:nowrap;}
+.zangyo-table td{padding:4px 5px;border:1px solid var(--border);}
+.zangyo-table tbody tr:hover{background:var(--bg2);}
+/* 就業時間（開始〜終了〜実働h） */
+.time-range{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;}
+.time-range input{padding:2px 3px;font-size:11px;text-align:center;border-radius:4px;
+  border:1px solid var(--border) !important;background:var(--bg3) !important;color:var(--text);}
+.time-range .time-start,.time-range .time-end{width:40px !important;}
+.time-range .hours-inp{width:46px !important;font-weight:700;color:var(--accent) !important;background:var(--bg2) !important;}
+.time-range .tr-sep{font-size:10px;color:var(--text3);}
+.time-range .tr-h{font-size:10px;color:var(--text3);margin-left:1px;}
 .kagaku-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;}
 .kagaku-chk{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;background:var(--bg2);line-height:1.35;}
 .kagaku-chk input{accent-color:var(--danger);flex-shrink:0;width:16px;height:16px;}
@@ -402,6 +415,7 @@ textarea.autogrow{overflow:hidden;}
     <button class="tab-btn" onclick="showTab('ky',this)">🔰 KY活動</button>
     <button class="tab-btn" onclick="showTab('anzen-junshi',this)">✅ 安全巡視点検</button>
     <button class="tab-btn" onclick="showTab('jisshi-hyo',this)">📅 月間実施表</button>
+    <button class="tab-btn" onclick="showTab('zangyo',this)">⏱️ 残業集計</button>
     <button class="tab-btn" onclick="showTab('help',this)">❓ 使い方</button>
     <button class="tab-btn" id="tab-settings" onclick="showTab('settings',this)">⚙️ 設定</button>
   </div>
@@ -732,6 +746,24 @@ textarea.autogrow{overflow:hidden;}
       <div id="jisshi-status" style="font-size:12px;color:var(--text3)"></div>
     </div>
     <div id="jisshi-hyo-area" style="margin-top:14px;overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- ===== 残業集計 ===== -->
+<div id="sec-zangyo" class="section">
+  <div class="card">
+    <div class="card-title">⏱️ 個人別 残業集計（月次）</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">
+      打合せ簿の就業時間から、個人ごとの実働・残業時間を集計します。<b>残業＝実働8時間を超えた分</b>。対象は<b>自社作業員と監督</b>（協力会社は含みません）。
+    </p>
+    <div class="form-row" style="align-items:flex-end;gap:10px">
+      <div class="fg" style="max-width:160px"><label>年月</label><input type="month" id="zangyo-month"></div>
+      <button class="btn btn-primary btn-sm" onclick="loadZangyo()">📊 集計</button>
+      <button class="btn btn-blue btn-sm" onclick="printZangyo()">🖨️ 印刷</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyZangyoCsv()">📋 CSVコピー</button>
+      <div id="zangyo-status" style="font-size:12px;color:var(--text3)"></div>
+    </div>
+    <div id="zangyo-area" style="margin-top:14px;overflow-x:auto"></div>
   </div>
 </div>
 
@@ -1361,33 +1393,6 @@ textarea.autogrow{overflow:hidden;}
 <!-- ===== 資格管理 ===== -->
 <div id="sec-master-shikaku" class="section">
 
-  <!-- 資格マスタ（種類） -->
-  <div class="card">
-    <div class="card-title">📜 資格マスタ（種類） <button class="btn btn-blue btn-sm" onclick="syncMasterToGAS(getSetting('gas-url'))" style="margin-left:auto;font-size:11px">📤 GASへ保存</button></div>
-    <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-blue btn-sm" onclick="loadDefaultShikaku()">📋 CCUS資格コードを一括登録（227件）</button>
-      <button class="btn btn-success btn-sm" onclick="rebuildShikakuMaster()" style="margin-left:6px">✨ 正規版に統一</button>
-      <button class="btn btn-orange btn-sm" onclick="repairHoyuShikaku()" style="margin-left:6px">🔧 「不明」「ダブり」を修復</button>
-      <button class="btn btn-ghost btn-sm" onclick="dedupeShikakuMaster()" style="margin-left:6px">🧹 重複を削除</button>
-      <span style="font-size:11px;color:var(--text3);align-self:center">技能講習・特別教育・各種免許などを一括登録</span>
-    </div>
-    <div class="master-input-row">
-      <div class="fg" style="max-width:100px"><label>資格番号</label>
-        <input type="text" id="sq-id" placeholder="Q015"></div>
-      <div class="fg w2"><label>資格名</label>
-        <input type="text" id="sq-name" placeholder="例：玉掛技能講習"></div>
-      <div style="display:flex;align-items:center;gap:6px;padding-top:18px">
-        <input type="checkbox" id="sq-kousin" style="width:14px;height:14px">
-        <label for="sq-kousin" style="font-size:12px;color:var(--text2)">更新あり</label>
-      </div>
-      <button class="btn btn-success" onclick="addShikakuMaster()">追加</button>
-    </div>
-    <table class="master-table" style="margin-top:10px">
-      <thead><tr><th>資格番号</th><th>資格名</th><th>更新</th><th>操作</th></tr></thead>
-      <tbody id="shikaku-master-tbody"></tbody>
-    </table>
-  </div>
-
   <!-- 保有資格（人員×資格） -->
   <div class="card">
     <div class="card-title">👷 保有資格（人員ごと）</div>
@@ -1465,6 +1470,33 @@ textarea.autogrow{overflow:hidden;}
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">📋 全員の資格一覧</div>
       <div id="hoyu-all-area"></div>
     </div>
+  </div>
+
+  <!-- 資格マスタ（種類） -->
+  <div class="card">
+    <div class="card-title">📜 資格マスタ（種類） <button class="btn btn-blue btn-sm" onclick="syncMasterToGAS(getSetting('gas-url'))" style="margin-left:auto;font-size:11px">📤 GASへ保存</button></div>
+    <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-blue btn-sm" onclick="loadDefaultShikaku()">📋 CCUS資格コードを一括登録（227件）</button>
+      <button class="btn btn-success btn-sm" onclick="rebuildShikakuMaster()" style="margin-left:6px">✨ 正規版に統一</button>
+      <button class="btn btn-orange btn-sm" onclick="repairHoyuShikaku()" style="margin-left:6px">🔧 「不明」「ダブり」を修復</button>
+      <button class="btn btn-ghost btn-sm" onclick="dedupeShikakuMaster()" style="margin-left:6px">🧹 重複を削除</button>
+      <span style="font-size:11px;color:var(--text3);align-self:center">技能講習・特別教育・各種免許などを一括登録</span>
+    </div>
+    <div class="master-input-row">
+      <div class="fg" style="max-width:100px"><label>資格番号</label>
+        <input type="text" id="sq-id" placeholder="Q015"></div>
+      <div class="fg w2"><label>資格名</label>
+        <input type="text" id="sq-name" placeholder="例：玉掛技能講習"></div>
+      <div style="display:flex;align-items:center;gap:6px;padding-top:18px">
+        <input type="checkbox" id="sq-kousin" style="width:14px;height:14px">
+        <label for="sq-kousin" style="font-size:12px;color:var(--text2)">更新あり</label>
+      </div>
+      <button class="btn btn-success" onclick="addShikakuMaster()">追加</button>
+    </div>
+    <table class="master-table" style="margin-top:10px">
+      <thead><tr><th>資格番号</th><th>資格名</th><th>更新</th><th>操作</th></tr></thead>
+      <tbody id="shikaku-master-tbody"></tbody>
+    </table>
   </div>
 
 </div>
@@ -3575,9 +3607,17 @@ function renderJimuinSelects(){
           <select class="role-sel" id="wrole-${j.id}" onclick="event.stopPropagation()" onchange="event.stopPropagation()">
             ${chipRoleOpts(j)}
           </select>
-          <input class="hours-inp" type="number" placeholder="h" step="0.5" min="0"
-            value="${getSetting('bulk-hours')||''}" oninput="calcTotals()" onclick="event.stopPropagation()">
-          <span style="font-size:10px;color:var(--text3)">h</span>
+          <span class="time-range" onclick="event.stopPropagation()">
+            <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getSetting('work-start')||WORK_START_DEF}"
+              oninput="onWorkTimeChange(this)">
+            <span class="tr-sep">〜</span>
+            <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${getSetting('work-end')||WORK_END_DEF}"
+              oninput="onWorkTimeChange(this)">
+            <input class="hours-inp" type="number" step="0.5" min="0" title="実働時間（自動計算・手入力可）"
+              value="${calcWorkHours(getSetting('work-start')||WORK_START_DEF,getSetting('work-end')||WORK_END_DEF)}"
+              oninput="this.dataset.auto='';calcTotals()">
+            <span class="tr-h">h</span>
+          </span>
         </label>`).join('');
     }
   }
@@ -3589,7 +3629,17 @@ function renderJimuinSelects(){
         <div style="min-width:90px;font-size:11px;color:var(--text2)">${ROLE_MAP[k.role]}</div>
         <div style="font-size:13px;font-weight:500;flex:1">${k.name}</div>
         <div class="fg" style="max-width:70px"><label>人数</label><input type="number" class="kantoku-ninzu" value="1" min="0" style="padding:4px 7px" oninput="calcTotals()"></div>
-        <div class="fg" style="max-width:70px"><label>時間(h)</label><input type="number" class="kantoku-hours" value="${getSetting('bulk-hours')||8}" min="0" step="0.5" style="padding:4px 7px" oninput="calcTotals()"></div>
+        <div class="fg" style="max-width:170px"><label>就業時間</label>
+          <span class="time-range">
+            <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getSetting('work-start')||WORK_START_DEF}" oninput="onWorkTimeChange(this)">
+            <span class="tr-sep">〜</span>
+            <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${getSetting('work-end')||WORK_END_DEF}" oninput="onWorkTimeChange(this)">
+            <input class="hours-inp kantoku-hours" type="number" step="0.5" min="0" title="実働時間（自動計算・手入力可）"
+              value="${calcWorkHours(getSetting('work-start')||WORK_START_DEF,getSetting('work-end')||WORK_END_DEF)}"
+              oninput="calcTotals()">
+            <span class="tr-h">h</span>
+          </span>
+        </div>
       </div>`).join('');
   }
   refreshJCompanySelect();calcTotals();
@@ -5194,7 +5244,11 @@ function doLoadYesterdayFrom(sourceDate){
                       if(workerData){
                         const cb=chip.querySelector('input[type=checkbox]');
                         const hInp=chip.querySelector('.hours-inp');
+                        const stI=chip.querySelector('.time-start');
+                        const enI=chip.querySelector('.time-end');
                         if(cb){cb.checked=true;chip.classList.add('selected');}
+                        if(stI&&workerData.start) stI.value=workerData.start;
+                        if(enI&&workerData.end) enI.value=workerData.end;
                         if(hInp) hInp.value=workerData.hours||8;
                       }
                     });
@@ -5538,7 +5592,9 @@ function collectUchiawaseSnapshot(){
     snap.kantoku.push({
       role:k?.role||'',name:k?.name||'',
       ninzu:parseInt(row.querySelector('.kantoku-ninzu')?.value||0)||0,
-      hours:parseFloat(row.querySelector('.kantoku-hours')?.value||0)||0
+      hours:parseFloat(row.querySelector('.kantoku-hours')?.value||0)||0,
+      start:row.querySelector('.time-start')?.value||'',
+      end:row.querySelector('.time-end')?.value||''
     });
   });
   document.querySelectorAll('#s1-junkai-members .jk-chip').forEach(chip=>{
@@ -5586,7 +5642,8 @@ function collectUchiawaseSnapshot(){
           const cb=chip.querySelector('input[type=checkbox]');
           if(cb&&cb.checked){
             const n=chip.querySelector('.chip-name');const h=chip.querySelector('.hours-inp');
-            co.workers.push({name:n?.textContent.trim()||'',hours:parseFloat(h?.value||0)||0});
+            const st=chip.querySelector('.time-start');const en=chip.querySelector('.time-end');
+            co.workers.push({name:n?.textContent.trim()||'',hours:parseFloat(h?.value||0)||0,start:st?.value||'',end:en?.value||''});
           }
         });
       }else{
@@ -5801,11 +5858,15 @@ function restoreUchiawase(snap){
     setTimeout(()=>{
       document.querySelectorAll('#kantoku-list .form-row').forEach((row,i)=>{
         const k=sortedKantokuMaster()[i];
-        // role優先で照合、なければインデックス
-        const kd=snap.kantoku.find(x=>x.role&&k&&x.role===k.role)||snap.kantoku[i];
+        // 氏名優先で照合（同役職が複数いる場合の取り違えを防ぐ）→ role → インデックス
+        const kd=(k&&snap.kantoku.find(x=>x.name&&x.name===k.name))
+              ||(k&&snap.kantoku.find(x=>x.role&&x.role===k.role))
+              ||snap.kantoku[i];
         if(kd){
           const ni=row.querySelector('.kantoku-ninzu');if(ni)ni.value=kd.ninzu;
           const hi=row.querySelector('.kantoku-hours');if(hi)hi.value=kd.hours;
+          const st=row.querySelector('.time-start');if(st&&kd.start)st.value=kd.start;
+          const en=row.querySelector('.time-end');if(en&&kd.end)en.value=kd.end;
         }
       });
       calcTotals();
@@ -8017,7 +8078,155 @@ async function loadJisshiHyo(){
   }
 }
 
-// 月間実施表を印刷
+// ===== 個人別 残業集計（月次） =====
+const ZANGYO_BASE_H=8;   // 所定労働時間（これを超えた分が残業）
+
+async function loadZangyo(){
+  const ym=document.getElementById('zangyo-month').value;
+  const statusEl=document.getElementById('zangyo-status');
+  const area=document.getElementById('zangyo-area');
+  if(!ym){alert('年月を選択してください');return;}
+  const gasUrl=getSetting('gas-url');
+  if(!gasUrl){alert('GAS URLが設定されていません');return;}
+
+  const [year,month]=ym.split('-').map(Number);
+  const lastDay=new Date(year,month,0).getDate();
+  const wdays=['日','月','火','水','木','金','土'];
+
+  statusEl.textContent='読み込み中...';
+  let daysData={};
+  try{
+    const res=await fetch(gasUrl+'?action=getMonthUchiawase&koujiId='+encodeURIComponent(currentKoujiId)+'&ym='+ym,{method:'GET',redirect:'follow'});
+    daysData=(JSON.parse(await res.text()).days)||{};
+  }catch(e){ statusEl.textContent='取得エラー: '+e.message; return; }
+
+  // 氏名 → {日付: 実働h} を集計（自社作業員＋監督のみ）
+  const people={};   // name → {kind:'作業員'|'監督', days:{date:hours}}
+  const add=(name,kind,date,hours)=>{
+    if(!name||!hours)return;
+    if(!people[name]) people[name]={kind,days:{}};
+    people[name].days[date]=(people[name].days[date]||0)+hours;
+  };
+
+  for(let d=1;d<=lastDay;d++){
+    const date=`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const data=daysData[date];
+    if(!data)continue;
+
+    // 道路巡回（自社）
+    (data.s1Junkai||[]).forEach(w=>add(w.name,'作業員',date,parseFloat(w.hours)||0));
+    // 各作業ブロック：自社会社の作業員のみ（協力会社は ninzu/hours のみで氏名が無いため対象外）
+    (data.sagyouBlocks||[]).forEach(b=>{
+      (b.companies||[]).forEach(co=>{
+        if(!co.jisha)return;
+        (co.workers||[]).forEach(w=>add(w.name,'作業員',date,parseFloat(w.hours)||0));
+      });
+      (b.kotsuCompanies||[]).forEach(co=>{
+        if(!co.jisha)return;
+        (co.workers||[]).forEach(w=>add(w.name,'作業員',date,parseFloat(w.hours)||0));
+      });
+    });
+    // 監督（人数1以上のみ計上）
+    (data.kantoku||[]).forEach(k=>{
+      if(!(parseInt(k.ninzu)>0))return;
+      add(k.name,'監督',date,parseFloat(k.hours)||0);
+    });
+  }
+
+  const names=Object.keys(people);
+  if(names.length===0){
+    area.innerHTML='<p style="font-size:13px;color:var(--text3);padding:12px">この月のデータがありません。</p>';
+    statusEl.textContent='';
+    return;
+  }
+
+  // 集計行を作る
+  const rows=names.map(name=>{
+    const p=people[name];
+    let work=0, ot=0, days=0;
+    Object.entries(p.days).forEach(([date,h])=>{
+      if(h<=0)return;
+      days++; work+=h;
+      if(h>ZANGYO_BASE_H) ot+=h-ZANGYO_BASE_H;
+    });
+    return {name,kind:p.kind,days,work:Math.round(work*10)/10,ot:Math.round(ot*10)/10,detail:p.days};
+  }).sort((a,b)=> b.ot-a.ot || b.work-a.work || a.name.localeCompare(b.name,'ja'));
+
+  const sum=k=>Math.round(rows.reduce((s,r)=>s+r[k],0)*10)/10;
+
+  // 日別ヘッダ
+  let head='<th>氏名</th><th>区分</th><th>出役<br>日数</th><th>実働<br>時間</th><th>残業<br>時間</th>';
+  for(let d=1;d<=lastDay;d++){
+    const wd=new Date(year,month-1,d).getDay();
+    const c=wd===0?'#dc2626':wd===6?'#2563eb':'';
+    head+=`<th style="font-size:9px;padding:2px;${c?'color:'+c:''}">${d}<br>${wdays[wd]}</th>`;
+  }
+
+  let html=`<table class="zangyo-table"><thead><tr>${head}</tr></thead><tbody>`;
+  rows.forEach(r=>{
+    html+=`<tr>
+      <td style="font-weight:600;white-space:nowrap">${r.name}</td>
+      <td style="text-align:center;font-size:11px;color:var(--text2)">${r.kind}</td>
+      <td style="text-align:center">${r.days}</td>
+      <td style="text-align:center;font-weight:600">${r.work.toFixed(1)}</td>
+      <td style="text-align:center;font-weight:700;color:${r.ot>0?'var(--danger)':'var(--text3)'}">${r.ot>0?r.ot.toFixed(1):'—'}</td>`;
+    for(let d=1;d<=lastDay;d++){
+      const date=`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const h=r.detail[date]||0;
+      const over=h>ZANGYO_BASE_H;
+      html+=`<td style="text-align:center;font-size:10px;padding:2px;${over?'color:var(--danger);font-weight:700;background:rgba(239,68,68,0.08)':'color:var(--text2)'}">${h?h:''}</td>`;
+    }
+    html+='</tr>';
+  });
+  html+=`</tbody><tfoot><tr style="background:var(--bg3);font-weight:700">
+    <td colspan="2" style="text-align:center">合計（${rows.length}名）</td>
+    <td style="text-align:center">${sum('days')}</td>
+    <td style="text-align:center">${sum('work').toFixed(1)}</td>
+    <td style="text-align:center;color:var(--danger)">${sum('ot').toFixed(1)}</td>
+    <td colspan="${lastDay}"></td>
+  </tr></tfoot></table>
+  <p style="font-size:11px;color:var(--text3);margin-top:8px">
+    残業＝1日の実働が${ZANGYO_BASE_H}時間を超えた分。赤色のセルは残業が発生した日です。
+  </p>`;
+
+  area.innerHTML=html;
+  window._zangyoRows=rows;
+  window._zangyoYm=ym;
+  statusEl.textContent=`${year}年${month}月：${rows.length}名／残業計 ${sum('ot').toFixed(1)}h`;
+  statusEl.style.color='var(--accent2)';
+}
+
+function copyZangyoCsv(){
+  const rows=window._zangyoRows||[];
+  if(!rows.length){alert('先に「📊 集計」を実行してください');return;}
+  const lines=['氏名,区分,出役日数,実働時間,残業時間'];
+  rows.forEach(r=>lines.push(`${r.name},${r.kind},${r.days},${r.work.toFixed(1)},${r.ot.toFixed(1)}`));
+  const txt=lines.join('\n');
+  navigator.clipboard.writeText(txt).then(()=>showStatus('CSVをコピーしました ✓（Excelに貼り付けできます）','ok'))
+    .catch(()=>alert(txt));
+}
+
+function printZangyo(){
+  const area=document.getElementById('zangyo-area');
+  if(!area||!area.innerHTML.trim()){alert('先に「📊 集計」を実行してください');return;}
+  const ym=window._zangyoYm||'';
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>残業集計 ${ym}</title>
+    <style>
+      body{font-family:"Yu Gothic","Hiragino Sans",sans-serif;padding:14px;}
+      h2{font-size:16px;margin:0 0 10px}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th,td{border:1px solid #999;padding:3px 4px}
+      th{background:#eee}
+      @page{size:A4 landscape;margin:8mm}
+    </style></head><body>
+    <h2>個人別 残業集計　${ym}　（${document.getElementById('kouji-name')?.value||''}）</h2>
+    ${area.innerHTML}
+    </body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(),400);
+}
+
 function printJisshiHyo(){
   const area=document.getElementById('jisshi-hyo-area');
   const ym=document.getElementById('jisshi-month').value;
@@ -9671,6 +9880,43 @@ function updateMonthHistoryInfo(){
   if(el2) el2.textContent=nendoH.toFixed(1);
 }
 
+// ===== 就業時間（開始〜終了）から実働時間を算出 =====
+const WORK_BREAK_H=1;          // 昼休憩（時間）
+const WORK_START_DEF='8:00';   // 既定の開始
+const WORK_END_DEF='17:00';    // 既定の終了
+
+// "8" "8:30" "0830" → 時（小数）に変換
+function parseHM(v){
+  if(v==null)return NaN;
+  const s=String(v).trim();
+  if(s==='')return NaN;
+  let m=s.match(/^(\d{1,2})[:：]?(\d{2})?$/);
+  if(!m)return NaN;
+  const h=parseInt(m[1],10), mi=m[2]?parseInt(m[2],10):0;
+  if(isNaN(h)||h>23||mi>59)return NaN;
+  return h+mi/60;
+}
+// 開始・終了から実働時間（拘束6h超のとき休憩1h控除）を算出。0.5h単位に丸める
+function calcWorkHours(start,end){
+  const s=parseHM(start), e=parseHM(end);
+  if(isNaN(s)||isNaN(e))return '';
+  let d=e-s;
+  if(d<=0) d+=24;                      // 日跨ぎ（夜勤）
+  if(d>6) d-=WORK_BREAK_H;             // 半日勤務(拘束6h以下)は休憩を引かない
+  return Math.round(d*2)/2;
+}
+// 開始/終了の入力欄が変わったら、時間欄を自動更新（手入力も可）
+function onWorkTimeChange(el){
+  const wrap=el.closest('.time-range');
+  if(!wrap)return;
+  const st=wrap.querySelector('.time-start')?.value;
+  const en=wrap.querySelector('.time-end')?.value;
+  const hi=wrap.querySelector('.hours-inp');
+  const h=calcWorkHours(st,en);
+  if(hi&&h!==''){ hi.value=h; hi.dataset.auto='1'; }
+  calcTotals();
+}
+
 // textarea自動拡大（内容量に応じて高さを伸ばす）
 function autoGrowTa(el){
   if(!el)return;
@@ -9700,6 +9946,9 @@ function init(){
   // 月間実施表の年月初期値（今月）
   const jm=document.getElementById('jisshi-month');
   if(jm)jm.value=today.slice(0,7);
+  // 残業集計の年月初期値（今月）
+  const zm=document.getElementById('zangyo-month');
+  if(zm)zm.value=today.slice(0,7);
   // 使い方ヘルプの初期化
   initHelp();
   // 体調チェックフォームQRの初期化
