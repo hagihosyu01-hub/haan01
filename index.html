@@ -1814,14 +1814,14 @@ function onRoleCheckChange(labelEl){
 function updateRoleCheckbox(jimuinId){
   const checks=[...document.querySelectorAll(`input[name="role-${jimuinId}"]:checked`)];
   const roles=checks.map(c=>c.value);
-  const j=DB.jimuin.find(x=>x.id===jimuinId);
+  const j=DB.jimuin.find(x=>String(x.id)===String(jimuinId));
   if(j){ j.role=roles.length?roles.join(','):'worker'; saveDB(); }
   // 巡回メンバー選択肢を更新（テーブル再描画はしない→班が消えない）
   refreshJunkaiNameSelect();
 }
 
 function updateRoleSelect(jimuinId, roleValue){
-  const j=DB.jimuin.find(x=>x.id===jimuinId);
+  const j=DB.jimuin.find(x=>String(x.id)===String(jimuinId));
   if(j){ j.role=roleValue; saveDB(); }
 }
 
@@ -3713,7 +3713,7 @@ function addJimuin(){
   renderCompanyMaster();refreshAllCompanySelects();refreshJCompanySelect();
 }
 function deleteJimuin(id){
-  DB.jimuin=DB.jimuin.filter(j=>j.id!==id);saveDB();
+  DB.jimuin=DB.jimuin.filter(j=>String(j.id)!==String(id));saveDB();
   renderJimuinMaster();renderJimuinSelects();refreshShokuchoSelects();renderKantokuSignArea();
 }
 function renderJimuinMaster(){
@@ -3739,7 +3739,7 @@ function renderJimuinMaster(){
 
 // 作業員の班を設定
 function setJimuinHan(id,han){
-  const j=DB.jimuin.find(x=>x.id===id);
+  const j=DB.jimuin.find(x=>String(x.id)===String(id));
   if(!j)return;
   j.han=han;
   saveDB();
