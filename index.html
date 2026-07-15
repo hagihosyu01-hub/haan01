@@ -291,6 +291,7 @@ textarea.autogrow{overflow:hidden;}
 .mode-btn.active{background:var(--accent);color:#fff;}
 /* モードに応じた表示切り替え（既定＝打合せ簿モード） */
 .nippou-only{display:none;}
+.nippou-only-flex{display:none;}
 body.mode-nippou .nippou-only{display:block;}
 body.mode-nippou .nippou-only-flex{display:flex;}
 body.mode-nippou .uchiawase-only{display:none;}
@@ -328,6 +329,7 @@ body.mode-nippou .uchiawase-only{display:none;}
 .jisseki-radio:has(input[value="done"]:checked){background:rgba(16,185,129,0.15);border-color:var(--accent2);color:var(--accent2);}
 .jisseki-radio:has(input[value="cancel"]:checked){background:rgba(239,68,68,0.12);border-color:var(--danger);color:var(--danger);}
 .jisseki-radio:has(input[value="change"]:checked){background:rgba(245,158,11,0.12);border-color:#d97706;color:#d97706;}
+.jisseki-radio:has(#chushi-toggle input:checked),label.jisseki-radio:has(input[id^="chushi-"]:checked){background:rgba(239,68,68,0.12);border-color:var(--danger);color:var(--danger);}
 .card.sagyou-cancelled{opacity:0.55;}
 #save-btn.saved,#save-ky-btn.saved,#save-junshi-btn.saved{background:var(--accent2) !important;border-color:var(--accent2) !important;}
 [id^="save-ky-block-"].saved,[id^="save-kotsu-block-"].saved{background:var(--accent2) !important;border-color:var(--accent2) !important;}
@@ -3972,7 +3974,12 @@ function onCoChange(sel,rid){
     // 除外リスト：監督マスタ登録者・巡回レギュラー
     const kantokuNames=sortedKantokuMaster().map(k=>k.name);
     const junkaiRegularNames=DB.junkaiMaster.filter(m=>m.type==='regular').map(m=>m.name);
-    const excludeNames=[...new Set([...kantokuNames,...junkaiRegularNames])];
+    // 役割が巡回員・運行員の人も作業ブロックには出さない（巡回専属メンバー）
+    const junkaiRoleNames=DB.jimuin.filter(j=>{
+      const r=String(j.role||'').split(',').map(s=>s.trim());
+      return r.includes('junkai')||r.includes('unten');
+    }).map(j=>j.name);
+    const excludeNames=[...new Set([...kantokuNames,...junkaiRegularNames,...junkaiRoleNames])];
     const jishaWorkers=DB.jimuin.filter(j=>{
       const eff=getEffectiveUkeoi(j);
       return j.company===sel.value
@@ -4005,7 +4012,7 @@ function onCoChange(sel,rid){
           <select class="role-sel" onclick="event.stopPropagation()" onchange="event.stopPropagation()">
             ${(getRoleOptions(getEffectiveUkeoi(j))||[]).map(o=>`<option value="${o.value}"${j.role===o.value?' selected':''}>${o.label}</option>`).join('')}
           </select>
-          <span class="time-range" onclick="event.stopPropagation()">
+          <span class="time-range nippou-only-flex" onclick="event.stopPropagation()">
             <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${WORK_START_DEF}" oninput="onWorkTimeChange(this)">
             <span class="tr-sep">〜</span>
             <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${WORK_END_DEF}" oninput="onWorkTimeChange(this)">
@@ -4014,8 +4021,8 @@ function onCoChange(sel,rid){
             <span class="tr-h">h</span>
           </span>
         </label>`;
-      // この会社の全員に就業時間を一括設定するバー
-      let html=`<div class="bulk-time-bar" style="flex:0 0 100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;padding:6px 8px;background:rgba(59,130,246,0.06);border:1px solid var(--border);border-radius:6px">
+      // この会社の全員に就業時間を一括設定するバー（日報モードのみ）
+      let html=`<div class="bulk-time-bar nippou-only-flex" style="flex:0 0 100%;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;padding:6px 8px;background:rgba(59,130,246,0.06);border:1px solid var(--border);border-radius:6px">
         <span style="font-size:11px;font-weight:600;color:var(--accent3)">⏱️ 就業時間を一括設定</span>
         <span class="time-range">
           <input class="bulk-start" type="text" inputmode="numeric" placeholder="8" value="${WORK_START_DEF}">
@@ -4755,23 +4762,30 @@ function addSagyou(data){
 }
 // 実績状態の変更
 function onJissekiChange(id){
-  const val=document.querySelector(`input[name="jisseki-${id}"]:checked`)?.value||'done';
+  // 旧ラジオ互換（存在すれば同期）
+  const val=document.querySelector(`input[name="jisseki-${id}"]:checked`)?.value;
+  if(val){ const h=document.getElementById('jisseki-state-'+id); if(h)h.value=val; }
+  applyJissekiState(id);
+}
+
+// 中止ON/OFFトグル
+function onChushiToggle(id){
+  const on=document.getElementById('chushi-'+id)?.checked;
+  const h=document.getElementById('jisseki-state-'+id);
+  if(h) h.value=on?'cancel':'done';
+  applyJissekiState(id);
+}
+
+// 状態に応じた表示・クラスを反映
+function applyJissekiState(id){
+  const val=document.getElementById('jisseki-state-'+id)?.value||'done';
   const reasonArea=document.getElementById('jisseki-reason-'+id);
   const card=document.getElementById('card-'+id);
-  const reasonInp=document.getElementById('reason-'+id);
-  const cancelCountWrap=document.getElementById('cancel-count-'+id)?.closest('label');
-  if(val==='done'){
-    if(reasonArea) reasonArea.style.display='none';
-    if(card) card.classList.remove('sagyou-cancelled');
-  }else if(val==='cancel'){
+  if(val==='cancel'){
     if(reasonArea) reasonArea.style.display='block';
-    if(reasonInp) reasonInp.placeholder='中止理由（例：雨天のため翌日に延期）';
-    if(cancelCountWrap) cancelCountWrap.style.display='inline-flex';
     if(card) card.classList.add('sagyou-cancelled');
-  }else{ // change
-    if(reasonArea) reasonArea.style.display='block';
-    if(reasonInp) reasonInp.placeholder='変更内容（例：午前で終了、午後は別現場）';
-    if(cancelCountWrap) cancelCountWrap.style.display='none';
+  }else{
+    if(reasonArea) reasonArea.style.display='none';
     if(card) card.classList.remove('sagyou-cancelled');
   }
   calcTotals();
@@ -4779,7 +4793,7 @@ function onJissekiChange(id){
 
 // 作業の実績状態を取得
 function getJissekiState(id){
-  return document.querySelector(`input[name="jisseki-${id}"]:checked`)?.value||'done';
+  return document.getElementById('jisseki-state-'+id)?.value||'done';
 }
 // 労務集計に含めるか（実施・変更は含む、中止は「含めるチェック」次第）
 function isCountedForLabor(id){
@@ -4792,20 +4806,23 @@ function buildSagyouHTML(id,idx){
   return `
     <div class="card-title">🔨 作業${idx}<button class="btn btn-danger btn-sm ml" onclick="removeSagyou('${id}')">削除</button></div>
     <div class="sagyou-block">
-      <!-- ⓪実績状態 -->
-      <div id="jisseki-bar-${id}" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);border-radius:6px">
-        <span style="font-size:12px;font-weight:600;color:var(--text)">状態</span>
-        <div style="display:flex;gap:4px">
-          <label class="jisseki-radio"><input type="radio" name="jisseki-${id}" value="done" checked onchange="onJissekiChange('${id}')"><span>✓ 実施</span></label>
-          <label class="jisseki-radio"><input type="radio" name="jisseki-${id}" value="cancel" onchange="onJissekiChange('${id}')"><span>✗ 中止</span></label>
-          <label class="jisseki-radio"><input type="radio" name="jisseki-${id}" value="change" onchange="onJissekiChange('${id}')"><span>△ 変更</span></label>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <label style="font-size:11px;color:var(--text2)">作業量</label>
-          <input type="text" id="ryo-${id}" placeholder="例：150㎡ / 200m / 一式" style="width:160px;padding:4px 8px;font-size:12px">
-        </div>
-        <label class="jisseki-radio" style="margin-left:auto" title="夜間工事の場合はON">
+      <!-- ⓪中止トグル（日報モードのみ）＋夜間（常時） -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <input type="hidden" id="jisseki-state-${id}" value="done">
+        <label class="jisseki-radio nippou-only-flex" id="chushi-toggle-${id}" title="この作業が中止になった場合はON"
+          style="align-items:center;padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);cursor:pointer">
+          <input type="checkbox" id="chushi-${id}" onchange="onChushiToggle('${id}')"><span>✗ 作業中止</span>
+        </label>
+        <label class="jisseki-radio" title="夜間工事の場合はON" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg2)">
           <input type="checkbox" id="yakan-${id}" onchange="onYakanChange('${id}')"><span>🌙 夜間</span>
+        </label>
+      </div>
+      <!-- 中止理由（中止時のみ表示・日報モード） -->
+      <div id="jisseki-reason-${id}" class="nippou-only" style="display:none;margin-bottom:10px">
+        <input type="text" id="reason-${id}" placeholder="中止理由（例：雨天のため翌日に延期）" style="width:100%;padding:5px 8px;font-size:12px">
+        <label style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:11px;color:var(--text2)">
+          <input type="checkbox" id="cancel-count-${id}" style="accent-color:var(--accent2)">
+          中止だが人員を労務集計に含める
         </label>
       </div>
       <!-- 中止・変更の理由（状態に応じて表示） -->
@@ -5383,8 +5400,9 @@ function doLoadYesterdayFrom(sourceDate){
         const biEl=document.getElementById('biko-'+id);if(biEl)biEl.value=block.biko||'';
         // 実績状態の復元
         if(block.jisseki){
-          const rb=document.querySelector(`input[name="jisseki-${id}"][value="${block.jisseki}"]`);
-          if(rb){rb.checked=true;}
+          const h=document.getElementById('jisseki-state-'+id); if(h)h.value=block.jisseki;
+          const cb=document.getElementById('chushi-'+id); if(cb)cb.checked=(block.jisseki==='cancel');
+          applyJissekiState(id);
         }
         const ryoEl=document.getElementById('ryo-'+id);if(ryoEl)ryoEl.value=block.ryo||'';
         const rsEl=document.getElementById('reason-'+id);if(rsEl)rsEl.value=block.reason||'';
@@ -6157,8 +6175,9 @@ function restoreUchiawase(snap){
         const biEl=document.getElementById('biko-'+id);if(biEl)biEl.value=block.biko||'';
         // 実績状態の復元
         if(block.jisseki){
-          const rb=document.querySelector(`input[name="jisseki-${id}"][value="${block.jisseki}"]`);
-          if(rb){rb.checked=true;}
+          const h=document.getElementById('jisseki-state-'+id); if(h)h.value=block.jisseki;
+          const cb=document.getElementById('chushi-'+id); if(cb)cb.checked=(block.jisseki==='cancel');
+          applyJissekiState(id);
         }
         const ryoEl=document.getElementById('ryo-'+id);if(ryoEl)ryoEl.value=block.ryo||'';
         const rsEl=document.getElementById('reason-'+id);if(rsEl)rsEl.value=block.reason||'';
