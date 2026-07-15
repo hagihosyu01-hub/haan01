@@ -92,15 +92,17 @@ body{font-family:'Hiragino Sans','Meiryo',sans-serif;background:var(--bg);color:
     gap:12px;
     align-items:start;
   }
-  /* 並び順を order で制御：基本情報→監理サイン→人員→作業1→作業2…→作業追加→資材 */
-  body.three-col #sec-uchiawase.active > .col-left > div:nth-of-type(1){order:1;}   /* 基本情報 */
-  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(1){order:2;}  /* 監理サイン */
-  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(3){order:3;}  /* 人員集計 */
-  body.three-col #sec-uchiawase.active > .col-left > div:nth-of-type(2){order:4;}   /* 作業1 */
-  body.three-col #sec-uchiawase.active #sagyou-dynamic{display:contents;}            /* 作業2〜を個別の列に */
-  body.three-col #sec-uchiawase.active #sagyou-dynamic > .card{order:5;}            /* 作業2〜（段落ちで横3列に流れる） */
-  body.three-col #sec-uchiawase.active > .col-left > button{order:6;}               /* 作業を追加 */
-  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(2){order:7;}  /* 資材搬入 */
+  /* 明示配置：
+     上段  1列目=基本情報（縦長,2行分）／2列目=人員→資材／3列目=監理サイン→日報実績
+     下段  作業1・作業2・作業3…を横3列で流す（4つ目以降は段落ち） */
+  body.three-col #sec-uchiawase.active > .col-left > div:nth-of-type(1){grid-column:1;grid-row:1/span 2;}  /* 基本情報 */
+  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(4){grid-column:2;grid-row:1;}        /* 人員集計 */
+  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(3){grid-column:2;grid-row:2;}        /* 資材搬入 */
+  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(2){grid-column:3;grid-row:1;}        /* 監理サイン */
+  body.three-col #sec-uchiawase.active > .col-right > div:nth-of-type(1){grid-column:3;grid-row:2;}        /* 本日の作業実績・所感（日報時のみ） */
+  body.three-col #sec-uchiawase.active > .col-left > div:nth-of-type(2){grid-column:1;}                    /* 作業1（下段・自動行） */
+  body.three-col #sec-uchiawase.active #sagyou-dynamic{display:contents;}                                  /* 作業2〜を個別の列に */
+  body.three-col #sec-uchiawase.active > .col-left > button{grid-column:1/-1;}                             /* 作業を追加（全幅） */
 
   /* 3列時は列幅が狭いので各欄を1列に詰める */
   body.three-col #sec-uchiawase .fg.w-quarter,
