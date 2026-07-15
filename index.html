@@ -290,11 +290,11 @@ textarea.autogrow{overflow:hidden;}
 .mode-btn+.mode-btn{border-left:1px solid var(--border);}
 .mode-btn.active{background:var(--accent);color:#fff;}
 /* モードに応じた表示切り替え（既定＝打合せ簿モード） */
-.nippou-only{display:none;}
-.nippou-only-flex{display:none;}
-body.mode-nippou .nippou-only{display:block;}
-body.mode-nippou .nippou-only-flex{display:flex;}
-body.mode-nippou .uchiawase-only{display:none;}
+.nippou-only{display:none !important;}
+.nippou-only-flex{display:none !important;}
+body.mode-nippou .nippou-only{display:block !important;}
+body.mode-nippou .nippou-only-flex{display:flex !important;}
+body.mode-nippou .uchiawase-only{display:none !important;}
 /* 残業集計テーブル */
 .zangyo-table{width:100%;border-collapse:collapse;font-size:12px;}
 .zangyo-table th{background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;padding:4px 5px;border:1px solid var(--border);white-space:nowrap;}
@@ -2466,6 +2466,7 @@ function renderS1JunkaiMembers(){
     </label>`;
   });
   area.innerHTML=html||'<p style="font-size:12px;color:var(--text3)">メンバー未設定</p>';
+  applyReportModeVisibility(getReportMode()==='nippou');
   calcTotals();
 }
 
@@ -3833,7 +3834,7 @@ function renderJimuinSelects(){
           <select class="role-sel" id="wrole-${j.id}" onclick="event.stopPropagation()" onchange="event.stopPropagation()">
             ${chipRoleOpts(j)}
           </select>
-          <span class="time-range" onclick="event.stopPropagation()">
+          <span class="time-range nippou-only-flex" onclick="event.stopPropagation()">
             <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getWorkStart()}"
               oninput="onWorkTimeChange(this)">
             <span class="tr-sep">〜</span>
@@ -4082,6 +4083,7 @@ function onCoChange(sel,rid){
     wrap.style.display='none';
     wrap.innerHTML='';
   }
+  applyReportModeVisibility(getReportMode()==='nippou');
   calcTotals();
 }
 
@@ -8113,8 +8115,18 @@ function setReportMode(mode){
   const kionLabel=document.querySelector('label[for-kion]');
   document.querySelectorAll('.kion-label-text').forEach(el=>el.textContent=isNippou?'最高気温':'予想最高気温');
   document.querySelectorAll('.kionmin-label-text').forEach(el=>el.textContent=isNippou?'最低気温':'予想最低気温');
+  applyReportModeVisibility(isNippou);
   localStorage.setItem('anzen_report_mode',mode);
   saveSetting('report-mode',mode);
+}
+// CSSの特異性に依存せず、就業時間・一括バーの表示をJSでも確実に切り替える
+function applyReportModeVisibility(isNippou){
+  document.querySelectorAll('.worker-chip .time-range, .jk-chip .hours-inp, .jk-chip .tr-h').forEach(el=>{
+    el.style.display=isNippou?'':'none';
+  });
+  document.querySelectorAll('.bulk-time-bar').forEach(el=>{
+    el.style.display=isNippou?'flex':'none';
+  });
 }
 function getReportMode(){ return document.body.classList.contains('mode-nippou')?'nippou':'uchiawase'; }
 
