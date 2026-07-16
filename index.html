@@ -513,11 +513,6 @@ body.mode-nippou .uchiawase-only{display:none !important;}
     <div class="form-row">
       <div class="fg w2"><label>工事名</label><input type="text" id="kouji-name" value="萩保守工事"></div>
       <div class="fg w-quarter"><label>日付 <span id="kouji-date-youbi" style="font-size:13px;font-weight:700"></span></label><input type="date" id="kouji-date"></div>
-      <div class="fg w-quarter"><label>天気 <span id="tenki-emoji" style="font-size:16px"></span></label>
-        <select id="tenki" onchange="updateTenkiColor()"><option value="">📡 気象取得してください</option><option>快晴</option><option>晴れ</option><option>晴れ時々曇り</option><option>曇り時々晴れ</option><option>曇り</option><option>曇り時々雨</option><option>雨</option><option>雪</option><option>雷雨</option></select>
-      </div>
-      <div class="fg w-quarter"><label><span class="kion-label-text">予想最高気温</span> (℃) <span id="kion-emoji" style="font-size:14px"></span></label><input type="number" id="kion" placeholder="📡 気象取得" oninput="updateHeatKyDisplay();updateKionColor();refreshWbgtCardForDate()"></div>
-      <div class="fg w-quarter"><label><span class="kionmin-label-text">予想最低気温</span> (℃)</label><input type="number" id="kion-min" placeholder="📡 気象取得"></div>
       <div class="fg" style="padding-top:18px">
         <label style="font-size:10px;color:var(--text3)">🌤 気象取得</label>
         <div style="display:flex;gap:4px">
@@ -526,6 +521,11 @@ body.mode-nippou .uchiawase-only{display:none !important;}
         </div>
         <div id="uchiawase-weather-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
       </div>
+      <div class="fg w-quarter"><label>天気 <span id="tenki-emoji" style="font-size:16px"></span></label>
+        <select id="tenki" onchange="updateTenkiColor()"><option value="">📡 気象取得してください</option><option>快晴</option><option>晴れ</option><option>晴れ時々曇り</option><option>曇り時々晴れ</option><option>曇り</option><option>曇り時々雨</option><option>雨</option><option>雪</option><option>雷雨</option></select>
+      </div>
+      <div class="fg w-quarter"><label><span class="kion-label-text">予想最高気温</span> (℃) <span id="kion-emoji" style="font-size:14px"></span></label><input type="number" id="kion" placeholder="📡 気象取得" oninput="updateHeatKyDisplay();updateKionColor();refreshWbgtCardForDate()"></div>
+      <div class="fg w-quarter"><label><span class="kionmin-label-text">予想最低気温</span> (℃)</label><input type="number" id="kion-min" placeholder="📡 気象取得"></div>
     </div>
     <div class="form-row">
       <div class="fg w-full">
@@ -973,7 +973,36 @@ body.mode-nippou .uchiawase-only{display:none !important;}
 <!-- ===== 化学防護手袋 ===== -->
 <div id="sec-gloves" class="section">
   <div class="card">
-    <div class="card-title">🧤 化学防護手袋 適合検索</div>
+    <div class="card-title">🧤 自社の保護手袋マスタ</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">
+      現場で使う保護手袋の製品を登録しておきます。ここで登録した製品が、化学物質の着用チェックなどで使えます。
+    </p>
+    <div class="form-row" style="align-items:flex-end;gap:8px">
+      <div class="fg" style="max-width:220px"><label>製品名</label><input type="text" id="glove-m-name" placeholder="例：ダイローブ730"></div>
+      <div class="fg" style="max-width:180px"><label>材質</label>
+        <select id="glove-m-material">
+          <option value="">選択</option>
+          <option>ニトリルゴム</option>
+          <option>天然ゴム（ラテックス）</option>
+          <option>ブチルゴム</option>
+          <option>クロロプレンゴム</option>
+          <option>フッ素ゴム</option>
+          <option>ポリビニルアルコール（PVA）</option>
+          <option>ポリ塩化ビニル</option>
+          <option>ウレタン</option>
+          <option>多層フィルム</option>
+          <option>その他</option>
+        </select>
+      </div>
+      <div class="fg" style="max-width:110px"><label>厚さ</label><input type="text" id="glove-m-thick" placeholder="0.3mm"></div>
+      <div class="fg" style="max-width:160px"><label>メーカー</label><input type="text" id="glove-m-maker" placeholder="ダイヤゴム"></div>
+      <button class="btn btn-success btn-sm" onclick="addGloveProduct()">＋ 登録</button>
+    </div>
+    <div id="glove-master-list" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔍 化学防護手袋 適合検索</div>
     <p style="font-size:12px;color:var(--text2);margin-bottom:10px">
       化学物質を選ぶと、耐透過性能に基づく<b>適合手袋（材質・製品）</b>を表示します。
       出典：建設業労働災害防止協会「化学防護手袋の耐透過性能一覧表」（2026年4月時点）。
@@ -1748,7 +1777,7 @@ body.mode-nippou .uchiawase-only{display:none !important;}
 
 <script>
 const GLOVE_DATA={"materials": [{"key": "nitrile01", "name": "ニトリルゴム", "thick": "0.1mm", "products": ["ダイローブ ESD3011（ダイヤゴム）", "ハナローブ406（ハナキゴム）", "Ansell 92-670"]}, {"key": "nitrile011", "name": "ニトリルゴム", "thick": "0.11mm", "products": ["ハナローブ K-72（ハナキゴム）", "Ansell 37-145"]}, {"key": "nitrile012", "name": "ニトリルゴム", "thick": "0.12mm", "products": ["ゴム手ストロング#1000（ショーワ）"]}, {"key": "nitrile013", "name": "ニトリルゴム", "thick": "0.13mm", "products": ["ダイローブ YN5011（ダイヤゴム）", "Ansell 37-165", "ハナローブ416"]}, {"key": "natural", "name": "天然ゴム(ラテックス)", "thick": "0.2mm", "products": ["Ansell 91-225", "ハナローブ K-82（ハナキゴム）"]}, {"key": "butyl", "name": "ブチルゴム", "thick": "0.3mm", "products": ["CN910 ブチルゴム製化学防護手袋（東和/シモン系）", "ダイローブ640（ダイヤゴム）", "Ansell 38-514", "ハナローブ436"]}, {"key": "chloroprene", "name": "クロロプレンゴム", "thick": "0.38mm", "products": ["Ansell 29-865", "エフテログローブ A-10（重松）"]}, {"key": "pva", "name": "ポリビニルアルコール(PVA)", "thick": "0.45mm", "products": ["ダイローブ A95EX（ダイヤゴム）", "Ansell 15-554", "ハナローブ H-40"]}, {"key": "csm", "name": "クロロスルホン化ポリエチレン(CSM)", "thick": "0.46mm", "products": ["Ansell 38-612"]}, {"key": "pvc", "name": "ポリ塩化ビニル", "thick": "-", "products": ["133 塩化ビニール製化学防護手袋", "Ansell 29-500"]}, {"key": "urethane", "name": "ウレタン", "thick": "0.35mm", "products": ["ダイローブT1-N（ダイヤゴム）"]}, {"key": "fluoro_butyl", "name": "フッ素ゴム/ブチルゴム", "thick": "0.18mm", "products": ["CN920 フッ素ゴム製化学防護手袋", "ダイローブ730（ダイヤゴム）", "Ansell 02-100", "エフテログローブ A-20（重松）"]}, {"key": "chloro_natural", "name": "クロロプレン/天然ゴム", "thick": "0.45mm", "products": ["ダイローブ A95-55EX（ダイヤゴム）", "ハナローブ7885"]}, {"key": "nitrile_neoprene", "name": "ニトリル/ネオプレンゴム", "thick": "0.9mm", "products": ["GL-3000F", "Ansell 58-435", "エフテログローブ A-22（重松）"]}, {"key": "pvc_nitrile", "name": "ポリ塩化ビニル/ニトリルゴム", "thick": "0.5mm", "products": ["ダイローブ A96-55EX（ダイヤゴム）", "Ansell 53-003"]}, {"key": "multi_lldpe", "name": "多層フィルム(LLDPE)", "thick": "0.062mm", "products": ["CZ900 EVOH製 耐透過性インナー手袋（東和）", "Ansell 92-670"]}, {"key": "multi_evoh", "name": "多層フィルム(EVOH)", "thick": "0.06mm", "products": ["CD700 ニトリルゴム製使いきり（東和）", "Ansell 37-843"]}, {"key": "multi_other", "name": "その他多層/複層フィルム", "thick": "-", "products": ["ダイローブ GBC-1EX（ダイヤゴム）", "エフテログローブ B-22（重松）"]}], "substances": [{"struct": "311", "cas": "67-56-1", "name": "メタノール", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "△", "nitrile013": "△", "natural": "×", "butyl": "◎", "chloroprene": "△", "pva": "×", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "△", "nitrile_neoprene": "△", "pvc_nitrile": "○", "multi_lldpe": "◎", "multi_evoh": "×", "multi_other": "◎"}}, {"struct": "311", "cas": "71-36-3", "name": "１－ブタノール", "compat": {"nitrile01": "△", "nitrile011": "△", "nitrile012": "◎", "nitrile013": "◎", "natural": "×", "butyl": "◎", "chloroprene": "◎", "pva": "○", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "○", "nitrile_neoprene": "◎", "pvc_nitrile": "◎", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "223", "cas": "80-62-6", "name": "メタクリル酸メチル", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "×", "nitrile013": "△", "natural": "×", "butyl": "△", "chloroprene": "×", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "△", "chloro_natural": "×", "nitrile_neoprene": "×", "pvc_nitrile": "×", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "150", "cas": "96-29-7", "name": "ブタン－２－オン＝オキシム", "compat": {"nitrile01": "△", "nitrile011": "○", "nitrile012": "◎", "nitrile013": "◎", "natural": "×", "butyl": "◎", "chloroprene": "△", "pva": "-", "csm": "-", "pvc": "×", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "○", "nitrile_neoprene": "○", "pvc_nitrile": "△", "multi_lldpe": "-", "multi_evoh": "-", "multi_other": "◎"}}, {"struct": "314", "cas": "107-21-1", "name": "エチレングリコール", "compat": {"nitrile01": "◎", "nitrile011": "◎", "nitrile012": "◎", "nitrile013": "◎", "natural": "◎", "butyl": "◎", "chloroprene": "◎", "pva": "○", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "◎", "nitrile_neoprene": "◎", "pvc_nitrile": "◎", "multi_lldpe": "◎", "multi_evoh": "-", "multi_other": "◎"}}, {"struct": "292", "cas": "108-88-3", "name": "トルエン", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "△", "nitrile013": "△", "natural": "×", "butyl": "×", "chloroprene": "×", "pva": "◎", "csm": "×", "pvc": "-", "urethane": "△", "fluoro_butyl": "◎", "chloro_natural": "×", "nitrile_neoprene": "×", "pvc_nitrile": "△", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "391", "cas": "108-94-1", "name": "シクロヘキサノン", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "△", "nitrile013": "△", "natural": "×", "butyl": "◎", "chloroprene": "×", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "○", "chloro_natural": "△", "nitrile_neoprene": "×", "pvc_nitrile": "△", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "291", "cas": "110-54-3", "name": "ノルマル－ヘキサン", "compat": {"nitrile01": "△", "nitrile011": "△", "nitrile012": "◎", "nitrile013": "◎", "natural": "×", "butyl": "×", "chloroprene": "△", "pva": "◎", "csm": "-", "pvc": "×", "urethane": "◎", "fluoro_butyl": "◎", "chloro_natural": "△", "nitrile_neoprene": "◎", "pvc_nitrile": "△", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "245", "cas": "111-76-2", "name": "エチレングリコールモノ－ノルマル－ブチルエーテル(ブチルセロソルブ)", "compat": {"nitrile01": "△", "nitrile011": "△", "nitrile012": "○", "nitrile013": "◎", "natural": "×", "butyl": "◎", "chloroprene": "○", "pva": "○", "csm": "-", "pvc": "○", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "△", "nitrile_neoprene": "○", "pvc_nitrile": "○", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "501", "cas": "112-55-0", "name": "ｎ－ドデシルメルカプタン", "compat": {"nitrile01": "○", "nitrile011": "○", "nitrile012": "◎", "nitrile013": "◎", "natural": "×", "butyl": "○", "chloroprene": "△", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "○", "nitrile_neoprene": "○", "pvc_nitrile": "○", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "-"}}, {"struct": "223", "cas": "140-88-5", "name": "アクリル酸エチル", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "△", "nitrile013": "△", "natural": "×", "butyl": "○", "chloroprene": "×", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "○", "chloro_natural": "×", "nitrile_neoprene": "×", "pvc_nitrile": "×", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "102", "cas": "149-57-5", "name": "２－エチルヘキサン酸", "compat": {"nitrile01": "○", "nitrile011": "○", "nitrile012": "◎", "nitrile013": "◎", "natural": "△", "butyl": "◎", "chloroprene": "○", "pva": "△", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "◎", "nitrile_neoprene": "○", "pvc_nitrile": "◎", "multi_lldpe": "◎", "multi_evoh": "-", "multi_other": "◎"}}, {"struct": "211", "cas": "822-06-0", "name": "ヘキサメチレン＝ジイソシアネート", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "△", "nitrile013": "△", "natural": "×", "butyl": "◎", "chloroprene": "×", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "△", "nitrile_neoprene": "△", "pvc_nitrile": "△", "multi_lldpe": "◎", "multi_evoh": "-", "multi_other": "◎"}}, {"struct": "132", "cas": "872-50-4", "name": "Ｎ－メチル－２－ピロリドン", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "△", "nitrile013": "△", "natural": "×", "butyl": "◎", "chloroprene": "×", "pva": "×", "csm": "-", "pvc": "○", "urethane": "-", "fluoro_butyl": "○", "chloro_natural": "△", "nitrile_neoprene": "×", "pvc_nitrile": "×", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "380", "cas": "1305-62-0", "name": "水酸化カルシウム", "compat": {"nitrile01": "◎", "nitrile011": "◎", "nitrile012": "◎", "nitrile013": "◎", "natural": "◎", "butyl": "◎", "chloroprene": "◎", "pva": "◎", "csm": "-", "pvc": "◎", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "◎", "nitrile_neoprene": "◎", "pvc_nitrile": "◎", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "330", "cas": "1305-78-8", "name": "生石灰(酸化カルシウム)", "compat": {"nitrile01": "◎", "nitrile011": "◎", "nitrile012": "◎", "nitrile013": "◎", "natural": "◎", "butyl": "◎", "chloroprene": "◎", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "◎", "nitrile_neoprene": "◎", "pvc_nitrile": "◎", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "-"}}, {"struct": "-", "cas": "1330-20-7", "name": "キシレン", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "△", "nitrile013": "△", "natural": "×", "butyl": "△", "chloroprene": "×", "pva": "◎", "csm": "-", "pvc": "×", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "×", "nitrile_neoprene": "△", "pvc_nitrile": "△", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "211", "cas": "4098-71-9", "name": "３－イソシアナトメチル－３，５，５－トリメチルシクロヘキシル＝イソシアネート", "compat": {"nitrile01": "△", "nitrile011": "△", "nitrile012": "○", "nitrile013": "◎", "natural": "△", "butyl": "◎", "chloroprene": "△", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "○", "nitrile_neoprene": "◎", "pvc_nitrile": "◎", "multi_lldpe": "◎", "multi_evoh": "-", "multi_other": "◎"}}, {"struct": "145", "cas": "5873-54-1", "name": "２，４'－ジフェニルメタンジイソシアネート", "compat": {"nitrile01": "○", "nitrile011": "◎", "nitrile012": "◎", "nitrile013": "◎", "natural": "◎", "butyl": "◎", "chloroprene": "○", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "◎", "nitrile_neoprene": "◎", "pvc_nitrile": "◎", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "-"}}, {"struct": "-", "cas": "8008-20-6", "name": "灯油", "compat": {"nitrile01": "△", "nitrile011": "△", "nitrile012": "○", "nitrile013": "○", "natural": "×", "butyl": "×", "chloroprene": "△", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "△", "nitrile_neoprene": "○", "pvc_nitrile": "○", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "-", "cas": "100-41-4", "name": "エチルベンゼン", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "△", "nitrile013": "△", "natural": "×", "butyl": "×", "chloroprene": "×", "pva": "◎", "csm": "-", "pvc": "×", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "△", "nitrile_neoprene": "×", "pvc_nitrile": "△", "multi_lldpe": "◎", "multi_evoh": "-", "multi_other": "◎"}}, {"struct": "-", "cas": "108-10-1", "name": "メチルイソブチルケトン", "compat": {"nitrile01": "×", "nitrile011": "-", "nitrile012": "×", "nitrile013": "△", "natural": "×", "butyl": "○", "chloroprene": "×", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "○", "chloro_natural": "×", "nitrile_neoprene": "×", "pvc_nitrile": "△", "multi_lldpe": "◎", "multi_evoh": "-", "multi_other": "◎"}}, {"struct": "-", "cas": "26471-62-5", "name": "トリレンジイソシアネート", "compat": {"nitrile01": "△", "nitrile011": "-", "nitrile012": "○", "nitrile013": "◎", "natural": "×", "butyl": "◎", "chloroprene": "△", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "○", "nitrile_neoprene": "×", "pvc_nitrile": "△", "multi_lldpe": "◎", "multi_evoh": "-", "multi_other": "◎"}}, {"struct": "391", "cas": "78-93-3", "name": "メチルエチルケトン", "compat": {"nitrile01": "×", "nitrile011": "×", "nitrile012": "×", "nitrile013": "×", "natural": "×", "butyl": "○", "chloroprene": "×", "pva": "○", "csm": "-", "pvc": "×", "urethane": "-", "fluoro_butyl": "○", "chloro_natural": "×", "nitrile_neoprene": "×", "pvc_nitrile": "△", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "311", "cas": "78-83-1", "name": "イソブチルアルコール", "compat": {"nitrile01": "△", "nitrile011": "△", "nitrile012": "◎", "nitrile013": "◎", "natural": "×", "butyl": "◎", "chloroprene": "○", "pva": "○", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "△", "nitrile_neoprene": "◎", "pvc_nitrile": "○", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "◎"}}, {"struct": "212", "cas": "101-68-8", "name": "メチレンビス(4,1-フェニレン)＝ジイソシアネート", "compat": {"nitrile01": "○", "nitrile011": "○", "nitrile012": "◎", "nitrile013": "◎", "natural": "△", "butyl": "◎", "chloroprene": "○", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "◎", "nitrile_neoprene": "◎", "pvc_nitrile": "◎", "multi_lldpe": "◎", "multi_evoh": "-", "multi_other": "◎"}}, {"struct": "-", "cas": "8052-42-4", "name": "ストレートアスファルト", "compat": {"nitrile01": "◎", "nitrile011": "◎", "nitrile012": "◎", "nitrile013": "◎", "natural": "○", "butyl": "◎", "chloroprene": "◎", "pva": "◎", "csm": "-", "pvc": "-", "urethane": "-", "fluoro_butyl": "◎", "chloro_natural": "◎", "nitrile_neoprene": "◎", "pvc_nitrile": "◎", "multi_lldpe": "◎", "multi_evoh": "◎", "multi_other": "-"}}, {"struct": "-", "cas": "75-09-2", "name": "ジクロロメタン(二塩化メチレン)", "compat": {"nitrile01": "-", "nitrile011": "-", "nitrile012": "-", "nitrile013": "-", "natural": "-", "butyl": "×", "chloroprene": "-", "pva": "◎", "csm": "×", "pvc": "×", "urethane": "×", "fluoro_butyl": "△", "chloro_natural": "×", "nitrile_neoprene": "×", "pvc_nitrile": "△", "multi_lldpe": "△", "multi_evoh": "-", "multi_other": "◎"}}], "makers": ["アンセル・ヘルスケア・ジャパン info-jp@ansell.com", "東和コーポレーション Tel 0120-621-001", "シモン glove-support", "ショーワグローブ Tel 0120-641245", "ハナキゴム info@hanakigomu.co.jp Tel 027-268-2440", "ダイヤゴム ibd.info@dailove.co.jp", "オカモト Tel 03-3817-4226", "重松製作所 Tel 03-6903-7526"]};
-let DB={jimuin:[],kantokuMaster:[],junkaiMaster:[],junkaiSchedule:{},calendar:{},yukyu:{},companies:[],koushu:[],shiki:[],kagaku:[],anzenItems:[],settings:{},history:[],
+let DB={jimuin:[],kantokuMaster:[],junkaiMaster:[],junkaiSchedule:{},calendar:{},yukyu:{},gloves:[],companies:[],koushu:[],shiki:[],kagaku:[],anzenItems:[],settings:{},history:[],
   shikakuMaster:[], // 資格マスタ（種類）
   shikakuHoyu:[],   // 保有資格（人員×資格）
   anzenJunshi:[],   // 安全巡視点検記録
@@ -2256,6 +2285,7 @@ function loadDB(){
     if(!DB.junkaiSchedule) DB.junkaiSchedule={};
     if(!DB.calendar) DB.calendar={};
     if(!DB.yukyu) DB.yukyu={};
+    if(!DB.gloves) DB.gloves=[];
     // 既存データのマイグレーション
     const typeMap={jisha:'元請',motouke:'元請',shita:'一次下請',shita1:'一次下請',shita2:'二次下請',ichi:'一次下請',ni:'二次下請'};
     DB.companies.forEach(c=>{if(typeMap[c.type]) c.type=typeMap[c.type];});
@@ -4126,11 +4156,20 @@ function onCoChange(sel,rid){
     // 自社：選択した会社の作業員のみ表示
     // 除外リスト：監督マスタ登録者・巡回レギュラー
     const kantokuNames=sortedKantokuMaster().map(k=>k.name);
-    const junkaiRegularNames=DB.junkaiMaster.filter(m=>m.type==='regular').map(m=>m.name);
-    // 役割が巡回員・運行員の人も作業ブロックには出さない（巡回専属メンバー）
+    // 班（1班・2班等）に所属しているかを判定するヘルパー
+    const hasHanByName=(name)=>{
+      const j=DB.jimuin.find(x=>x.name===name);
+      return j&&j.han&&j.han!==''&&j.han!=='未設定';
+    };
+    // 道路巡回マスタのレギュラーでも、班に所属していれば作業ブロックに残す
+    const junkaiRegularNames=DB.junkaiMaster.filter(m=>m.type==='regular').map(m=>m.name)
+      .filter(name=>!hasHanByName(name));
+    // 役割が巡回員・運行員の人は作業ブロックに出さない（ただし班所属者は残す）
     const junkaiRoleNames=DB.jimuin.filter(j=>{
       const r=String(j.role||'').split(',').map(s=>s.trim());
-      return r.includes('junkai')||r.includes('unten');
+      const isJunkai=r.includes('junkai')||r.includes('unten');
+      const hasHan=j.han&&j.han!==''&&j.han!=='未設定';
+      return isJunkai&&!hasHan;   // 巡回員かつ班なし＝巡回専属のみ除外
     }).map(j=>j.name);
     const excludeNames=[...new Set([...kantokuNames,...junkaiRegularNames,...junkaiRoleNames])];
     const jishaWorkers=DB.jimuin.filter(j=>{
@@ -8375,6 +8414,47 @@ function applyReportModeVisibility(isNippou){
 }
 function getReportMode(){ return document.body.classList.contains('mode-nippou')?'nippou':'uchiawase'; }
 
+// ===== 自社の保護手袋マスタ =====
+function addGloveProduct(){
+  const name=document.getElementById('glove-m-name').value.trim();
+  const material=document.getElementById('glove-m-material').value;
+  const thick=document.getElementById('glove-m-thick').value.trim();
+  const maker=document.getElementById('glove-m-maker').value.trim();
+  if(!name){alert('製品名を入力してください');return;}
+  if(!DB.gloves) DB.gloves=[];
+  if(DB.gloves.some(g=>g.name===name)){alert('その製品名は既に登録されています');return;}
+  DB.gloves.push({id:Date.now(),name,material,thick,maker});
+  saveDB();
+  document.getElementById('glove-m-name').value='';
+  document.getElementById('glove-m-thick').value='';
+  document.getElementById('glove-m-maker').value='';
+  renderGloveMaster();
+  showStatus('保護手袋を登録しました ✓','ok');
+}
+function deleteGloveProduct(id){
+  DB.gloves=(DB.gloves||[]).filter(g=>String(g.id)!==String(id));
+  saveDB();renderGloveMaster();
+}
+function renderGloveMaster(){
+  const area=document.getElementById('glove-master-list');
+  if(!area)return;
+  const list=DB.gloves||[];
+  if(list.length===0){
+    area.innerHTML='<p style="font-size:12px;color:var(--text3)">まだ製品が登録されていません。よく使う手袋を登録してください。</p>';
+    return;
+  }
+  area.innerHTML=`<table class="zangyo-table">
+    <thead><tr><th>製品名</th><th>材質</th><th>厚さ</th><th>メーカー</th><th></th></tr></thead>
+    <tbody>${list.map(g=>`<tr>
+      <td style="font-weight:600">${g.name}</td>
+      <td>${g.material||'—'}</td>
+      <td style="text-align:center">${g.thick||'—'}</td>
+      <td>${g.maker||'—'}</td>
+      <td style="text-align:center"><button class="btn btn-danger btn-sm" onclick="deleteGloveProduct('${g.id}')">削除</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
 // ===== 化学防護手袋 適合検索 =====
 function initGloveSelect(){
   const sel=document.getElementById('glove-substance');
@@ -11282,6 +11362,7 @@ function init(){
   renderYukyu();
   // 化学防護手袋の初期化
   initGloveSelect();
+  renderGloveMaster();
   // 就業時間の設定が壊れていたら既定値に戻す（1899-... などの異常値対策）
   ['work-start','work-end'].forEach(k=>{
     const v=getSetting(k);
