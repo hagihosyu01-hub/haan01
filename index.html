@@ -6940,7 +6940,7 @@ function exportPDF(returnBodyOnly=false){
 PDFCSS_START
 @page { size: A3 landscape; margin: 6mm; }
 *{ box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-body{ font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif; font-size:7.5pt; color:#111; background:#fff; }
+body{ font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif; font-size:8.6pt; color:#111; background:#fff; }
 
 /* ===== 改ページ ===== */
 .p-page-break{ page-break-before:always; }
@@ -6958,16 +6958,16 @@ body{ font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif; font-size:7.5
   display:flex; flex-direction:column; justify-content:center;
   min-width:42mm;
 }
-.p-main-title{ font-size:13pt; font-weight:bold; letter-spacing:2px; }
-.p-sub-title{ font-size:6.5pt; margin-top:1mm; opacity:0.9; }
+.p-main-title{ font-size:14.9pt; font-weight:bold; letter-spacing:2px; }
+.p-sub-title{ font-size:7.5pt; margin-top:1mm; opacity:0.9; }
 .p-header-info{ display:grid; grid-template-columns:repeat(4,1fr); flex:1; }
 .p-header-cell{ border-left:1px solid #c8d4e8; padding:1.5mm 2.5mm; display:flex; flex-direction:column; justify-content:center; }
-.p-cell-label{ font-size:6pt; color:#555; margin-bottom:0.5mm; }
-.p-cell-value{ font-size:11pt; font-weight:bold; color:#1e3a6e; }
+.p-cell-label{ font-size:6.9pt; color:#555; margin-bottom:0.5mm; }
+.p-cell-value{ font-size:12.6pt; font-weight:bold; color:#1e3a6e; }
 .p-header-signs{ border-left:1px solid #c8d4e8; padding:1mm 2mm; display:flex; gap:2mm; align-items:center; min-width:60mm; background:#f8faff; }
 .p-hdr-sign-item{ display:flex; flex-direction:column; align-items:center; gap:0.5mm; }
-.p-hdr-role{ font-size:5.5pt; color:#555; }
-.p-hdr-name{ font-size:6pt; font-weight:bold; }
+.p-hdr-role{ font-size:6.3pt; color:#555; }
+.p-hdr-name{ font-size:6.9pt; font-weight:bold; }
 .p-sign-img{ width:20mm; height:11mm; object-fit:contain; border:0.5px solid #ccc; border-radius:2px; }
 .p-sign-empty{ width:20mm; height:11mm; border:0.5px solid #ccc; border-radius:2px; background:#fafafa; }
 
@@ -6977,33 +6977,33 @@ body{ font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif; font-size:7.5
 .p-right{ width:62mm; flex-shrink:0; }
 
 /* ===== 作業テーブル ===== */
-.p-work-table{ width:100%; border-collapse:collapse; font-size:7pt; margin-bottom:2mm; }
+.p-work-table{ width:100%; border-collapse:collapse; font-size:8.0pt; margin-bottom:2mm; }
 .p-work-table th{
   background:linear-gradient(180deg,#1e3a6e,#2563eb);
   color:#fff; padding:1.5mm 1mm; text-align:center;
-  border:0.5px solid #3b5ea6; font-size:6.5pt; font-weight:600;
+  border:0.5px solid #3b5ea6; font-size:7.5pt; font-weight:600;
 }
 .p-work-table td{ border:0.5px solid #b0bcd4; padding:1mm 1.5mm; vertical-align:top; }
 .p-work-table tr:nth-child(even) td{ background:#f8faff; }
-.p-ku{ text-align:center; font-size:6.5pt; font-weight:600; color:#1e3a6e; width:9mm; }
-.p-koushu{ font-weight:600; color:#1e3a6e; font-size:7.5pt; }
-.p-sagyou{ font-size:6.5pt; color:#333; margin-top:0.5mm; }
-.p-biko{ font-size:6pt; color:#666; font-style:italic; }
-.p-chief{ font-size:6pt; color:#7c3aed; font-weight:600; margin-top:1mm; padding:0.5mm 1.5mm; background:rgba(124,58,237,0.08); border-radius:2px; display:inline-block; }
-.p-shiki{ font-size:6.5pt; }
-.p-ai-text{ font-size:6.5pt; color:#1e3a6e; line-height:1.5; }
-.p-tegaki-text{ font-size:6.5pt; color:#333; line-height:1.5; margin-top:1mm; padding-top:1mm; border-top:0.5px dashed #ccc; }
-.p-worker{ font-size:6.5pt; display:flex; align-items:center; gap:1mm; padding:0.3mm 0; }
-.p-role{ background:#e8f0ff; color:#2563eb; border-radius:2px; padding:0 1.5mm; font-size:5.5pt; }
-.p-hrs{ color:#666; font-size:6pt; }
-.p-hrs-cell{ text-align:center; font-weight:600; font-size:7pt; color:#1e3a6e; width:11mm; }
+.p-ku{ text-align:center; font-size:7.5pt; font-weight:600; color:#1e3a6e; width:9mm; }
+.p-koushu{ font-weight:600; color:#1e3a6e; font-size:8.6pt; }
+.p-sagyou{ font-size:7.5pt; color:#333; margin-top:0.5mm; }
+.p-biko{ font-size:6.9pt; color:#666; font-style:italic; }
+.p-chief{ font-size:6.9pt; color:#7c3aed; font-weight:600; margin-top:1mm; padding:0.5mm 1.5mm; background:rgba(124,58,237,0.08); border-radius:2px; display:inline-block; }
+.p-shiki{ font-size:7.5pt; }
+.p-ai-text{ font-size:7.5pt; color:#1e3a6e; line-height:1.5; }
+.p-tegaki-text{ font-size:7.5pt; color:#333; line-height:1.5; margin-top:1mm; padding-top:1mm; border-top:0.5px dashed #ccc; }
+.p-worker{ font-size:7.5pt; display:flex; align-items:center; gap:1mm; padding:0.3mm 0; }
+.p-role{ background:#e8f0ff; color:#2563eb; border-radius:2px; padding:0 1.5mm; font-size:6.3pt; }
+.p-hrs{ color:#666; font-size:6.9pt; }
+.p-hrs-cell{ text-align:center; font-weight:600; font-size:8.0pt; color:#1e3a6e; width:11mm; }
 .p-sign-cell{ width:22mm; text-align:center; }
-.p-chiku-badge{ background:#dcfce7; color:#16a34a; border-radius:2px; padding:0.5mm 2mm; font-size:6pt; font-weight:600; }
-.p-kotsu-form{ font-weight:600; color:#2563eb; font-size:7pt; }
+.p-chiku-badge{ background:#dcfce7; color:#16a34a; border-radius:2px; padding:0.5mm 2mm; font-size:6.9pt; font-weight:600; }
+.p-kotsu-form{ font-weight:600; color:#2563eb; font-size:8.0pt; }
 .p-kotsu-row td{ background:#eff6ff; border-top:0.5px dashed #93b4e8 !important; }
 .p-kagaku-block,.p-kiken-block{ margin-top:2mm; }
-.p-kagaku-table,.p-kiken-table{ width:100%; border-collapse:collapse; font-size:6pt; }
-.p-kagaku-table th,.p-kiken-table th{ background:#fef3c7; color:#92400e; padding:0.8mm 1mm; border:0.5px solid #fcd99a; font-size:5.5pt; }
+.p-kagaku-table,.p-kiken-table{ width:100%; border-collapse:collapse; font-size:6.9pt; }
+.p-kagaku-table th,.p-kiken-table th{ background:#fef3c7; color:#92400e; padding:0.8mm 1mm; border:0.5px solid #fcd99a; font-size:6.3pt; }
 .p-kagaku-table td,.p-kiken-table td{ border:0.5px solid #fcd99a; padding:0.8mm 1mm; vertical-align:top; line-height:1.4; }
 .p-kantoku-row td{ background:#f0f4ff; border-bottom:1px solid #b0bcd4; }
 
@@ -7014,28 +7014,28 @@ body{ font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif; font-size:7.5
 .p-jimuin-box{ flex:0.8; }
 .p-section-title{
   background:linear-gradient(90deg,#1e3a6e,#3b5ea6);
-  color:#fff; font-size:6.5pt; font-weight:600;
+  color:#fff; font-size:7.5pt; font-weight:600;
   padding:1mm 2mm; margin-bottom:1mm; border-radius:2px;
 }
-.p-renraku-body{ font-size:7pt; line-height:1.7; padding:1mm; min-height:12mm; border:0.5px solid #b0bcd4; border-radius:2px; white-space:pre-wrap; }
-.p-jimuin-table{ width:100%; border-collapse:collapse; font-size:6.5pt; }
-.p-jimuin-table th{ background:#e8f0ff; color:#1e3a6e; padding:0.8mm 1mm; border:0.5px solid #b0bcd4; font-size:6pt; }
+.p-renraku-body{ font-size:8.0pt; line-height:1.7; padding:1mm; min-height:12mm; border:0.5px solid #b0bcd4; border-radius:2px; white-space:pre-wrap; }
+.p-jimuin-table{ width:100%; border-collapse:collapse; font-size:7.5pt; }
+.p-jimuin-table th{ background:#e8f0ff; color:#1e3a6e; padding:0.8mm 1mm; border:0.5px solid #b0bcd4; font-size:6.9pt; }
 .p-jimuin-table td{ border:0.5px solid #b0bcd4; padding:0.8mm 1mm; }
-.p-shizai-table{ width:100%; border-collapse:collapse; font-size:6pt; }
-.p-shizai-table th{ background:#e8f0ff; color:#1e3a6e; padding:0.8mm 1mm; border:0.5px solid #b0bcd4; font-size:5.5pt; }
+.p-shizai-table{ width:100%; border-collapse:collapse; font-size:6.9pt; }
+.p-shizai-table th{ background:#e8f0ff; color:#1e3a6e; padding:0.8mm 1mm; border:0.5px solid #b0bcd4; font-size:6.3pt; }
 .p-shizai-table td{ border:0.5px solid #b0bcd4; padding:0.8mm 1mm; }
 
 /* ===== 安全巡視点検 ===== */
-.p-anzen-title{ background:linear-gradient(135deg,#1e3a6e,#2563eb); color:#fff; font-size:7pt; font-weight:600; padding:1.5mm 2mm; text-align:center; border-radius:2px 2px 0 0; }
-.p-anzen-sub{ font-size:5pt; opacity:0.85; }
-.p-anzen-table{ width:100%; border-collapse:collapse; font-size:6pt; }
-.p-anzen-cat{ background:#dbeafe; color:#1e3a6e; font-weight:600; padding:0.8mm 1mm; border:0.5px solid #b0bcd4; font-size:6pt; }
+.p-anzen-title{ background:linear-gradient(135deg,#1e3a6e,#2563eb); color:#fff; font-size:8.0pt; font-weight:600; padding:1.5mm 2mm; text-align:center; border-radius:2px 2px 0 0; }
+.p-anzen-sub{ font-size:5.8pt; opacity:0.85; }
+.p-anzen-table{ width:100%; border-collapse:collapse; font-size:6.9pt; }
+.p-anzen-cat{ background:#dbeafe; color:#1e3a6e; font-weight:600; padding:0.8mm 1mm; border:0.5px solid #b0bcd4; font-size:6.9pt; }
 .p-anzen-item{ padding:0.8mm 1mm; border:0.5px solid #b0bcd4; line-height:1.4; }
 .p-anzen-check{ width:6mm; border:0.5px solid #b0bcd4; text-align:center; }
 
 /* ===== 凡例・フッター ===== */
-.p-legend{ font-size:5.5pt; color:#666; padding:1mm 0; border-top:0.5px solid #ccc; margin-top:1mm; }
-.p-footer{ text-align:right; font-size:5.5pt; color:#999; margin-top:1mm; }
+.p-legend{ font-size:6.3pt; color:#666; padding:1mm 0; border-top:0.5px solid #ccc; margin-top:1mm; }
+.p-footer{ text-align:right; font-size:6.3pt; color:#999; margin-top:1mm; }
 
 /* ===== 2枚目：KY活動 ===== */
 .p-ky-header{
@@ -7051,36 +7051,36 @@ body{ font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif; font-size:7.5
 }
 .p-ky-header-info{ display:flex; flex:1; align-items:stretch; }
 .p-ky-info-item{ border-left:1px solid #a7f3d0; padding:1.5mm 3mm; display:flex; flex-direction:column; justify-content:center; }
-.p-ky-info-label{ font-size:6pt; color:#555; }
-.p-ky-info-val{ font-size:10pt; font-weight:bold; color:#16a34a; }
+.p-ky-info-label{ font-size:6.9pt; color:#555; }
+.p-ky-info-val{ font-size:11.5pt; font-weight:bold; color:#16a34a; }
 
 .p-heat-block{ background:#fef9f0; border:1px solid #fcd99a; border-radius:3px; padding:2mm; margin-bottom:2.5mm; }
-.p-heat-title{ font-size:8pt; font-weight:600; color:#d97706; margin-bottom:1mm; }
-.p-heat-content{ font-size:7pt; line-height:1.6; }
+.p-heat-title{ font-size:9.2pt; font-weight:600; color:#d97706; margin-bottom:1mm; }
+.p-heat-content{ font-size:8.0pt; line-height:1.6; }
 
 .p-ky-blocks{ display:flex; flex-wrap:wrap; gap:2mm; margin-bottom:2.5mm; }
 .p-ky-block{ flex:1; min-width:80mm; border:1px solid #a7f3d0; border-radius:3px; overflow:hidden; }
-.p-ky-block-title{ background:linear-gradient(90deg,#16a34a,#22c55e); color:#fff; font-size:7pt; font-weight:600; padding:1mm 2mm; }
+.p-ky-block-title{ background:linear-gradient(90deg,#16a34a,#22c55e); color:#fff; font-size:8.0pt; font-weight:600; padding:1mm 2mm; }
 .p-ky-content{ padding:1.5mm; }
-.p-ky-label{ font-size:6pt; color:#666; font-weight:600; margin-bottom:0.5mm; margin-top:1mm; }
-.p-ky-text{ font-size:6.5pt; line-height:1.5; }
+.p-ky-label{ font-size:6.9pt; color:#666; font-weight:600; margin-bottom:0.5mm; margin-top:1mm; }
+.p-ky-text{ font-size:7.5pt; line-height:1.5; }
 .p-ky-tegaki{ margin-top:1mm; padding-top:1mm; border-top:0.5px dashed #ccc; }
 .p-ky-signs-area{ margin-top:1.5mm; padding-top:1mm; border-top:0.5px solid #a7f3d0; }
 .p-ky-signs{ display:flex; flex-wrap:wrap; gap:2mm; margin-top:0.5mm; }
 .p-ky-sign-item{ display:flex; flex-direction:column; align-items:center; gap:0.5mm; }
-.p-ky-sign-name{ font-size:6pt; font-weight:600; }
+.p-ky-sign-name{ font-size:6.9pt; font-weight:600; }
 .p-ky-sign-img{ width:22mm; height:12mm; object-fit:contain; border:0.5px solid #ccc; border-radius:2px; }
 .p-ky-sign-empty{ width:22mm; height:12mm; border:0.5px solid #ccc; border-radius:2px; background:#fafafa; }
 
 .p-taichou-block{ border:1px solid #b0bcd4; border-radius:3px; padding:2mm; }
-.p-taichou-table{ width:100%; border-collapse:collapse; font-size:6.5pt; }
-.p-ky-kiken-tbl{ width:100%; border-collapse:collapse; font-size:6.5pt; margin-top:2px; }
-.p-ky-kiken-tbl th{ background:#e5e7eb; border:0.5px solid #999; padding:1px 3px; font-size:6pt; }
+.p-taichou-table{ width:100%; border-collapse:collapse; font-size:7.5pt; }
+.p-ky-kiken-tbl{ width:100%; border-collapse:collapse; font-size:7.5pt; margin-top:2px; }
+.p-ky-kiken-tbl th{ background:#e5e7eb; border:0.5px solid #999; padding:1px 3px; font-size:6.9pt; }
 .p-ky-kiken-tbl td{ border:0.5px solid #999; padding:1px 3px; }
-.p-ky-kiken-item{ border:0.5px solid #b0bcd4; border-radius:2px; padding:1mm; margin-bottom:1mm; font-size:6.5pt; line-height:1.5; }
+.p-ky-kiken-item{ border:0.5px solid #b0bcd4; border-radius:2px; padding:1mm; margin-bottom:1mm; font-size:7.5pt; line-height:1.5; }
 .p-ky-k-lbl{ font-weight:bold; color:#1e3a6e; }
-.p-ky-k-score{ font-size:6pt; color:#555; margin-top:0.5mm; }
-.p-taichou-table th{ background:#dcfce7; color:#16a34a; padding:1mm; border:0.5px solid #a7f3d0; font-size:6pt; }
+.p-ky-k-score{ font-size:6.9pt; color:#555; margin-top:0.5mm; }
+.p-taichou-table th{ background:#dcfce7; color:#16a34a; padding:1mm; border:0.5px solid #a7f3d0; font-size:6.9pt; }
 .p-taichou-table td{ border:0.5px solid #b0bcd4; padding:1mm; }
 PDFCSS_END
 </style>
