@@ -636,6 +636,15 @@ body.mode-nippou .uchiawase-only{display:none !important;}
       <span style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:6px">監督
         <button class="btn btn-ghost btn-sm" onclick="clearKantokuNinzu()" style="font-size:10px;margin-left:8px;font-weight:400">🚫 全員0人（土日等）</button>
       </span>
+      <div class="nippou-only-flex" style="align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;padding:6px 8px;background:rgba(59,130,246,0.06);border:1px solid var(--border);border-radius:6px">
+        <span style="font-size:11px;font-weight:600;color:var(--accent3)">⏱️ 監督の就業時間を一括設定</span>
+        <span class="time-range">
+          <input class="kantoku-bulk-start" type="text" inputmode="numeric" placeholder="8" value="8" style="width:40px">
+          <span class="tr-sep">〜</span>
+          <input class="kantoku-bulk-end" type="text" inputmode="numeric" placeholder="17" value="17" style="width:40px">
+        </span>
+        <button type="button" class="btn btn-blue btn-sm" style="font-size:10px;padding:3px 10px" onclick="applyKantokuBulkTime(this)">全員に反映</button>
+      </div>
       <div id="kantoku-list"></div>
     </div>
     <div style="border-top:1px solid var(--border);padding-top:10px">
@@ -3858,7 +3867,7 @@ function renderJimuinSelects(){
         <div style="min-width:90px;font-size:11px;color:var(--text2)">${ROLE_MAP[k.role]}</div>
         <div style="font-size:13px;font-weight:500;flex:1">${k.name}</div>
         <div class="fg" style="max-width:70px"><label>人数</label><input type="number" class="kantoku-ninzu" value="1" min="0" style="padding:4px 7px" oninput="calcTotals()"></div>
-        <div class="fg" style="max-width:200px;flex:0 0 200px"><label>就業時間</label>
+        <div class="fg nippou-only" style="max-width:200px;flex:0 0 200px"><label>就業時間</label>
           <span class="time-range">
             <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getWorkStart()}" oninput="onWorkTimeChange(this)">
             <span class="tr-sep">〜</span>
@@ -3873,6 +3882,7 @@ function renderJimuinSelects(){
   }
   refreshJCompanySelect();calcTotals();
   refreshJunkaiNameSelect();
+  applyReportModeVisibility(getReportMode()==='nippou');
 }
 
 // 監督を一括0人にする（土日など監督不在時）
@@ -4102,6 +4112,28 @@ function selectHanAll(btn,checked){
 }
 
 // ===== 一括時間 =====
+// 監督全員に就業時間を一括反映
+function applyKantokuBulkTime(btn){
+  const bar=btn.closest('.nippou-only-flex');
+  if(!bar)return;
+  const st=bar.querySelector('.kantoku-bulk-start')?.value||'';
+  const en=bar.querySelector('.kantoku-bulk-end')?.value||'';
+  const h=calcWorkHours(st,en);
+  if(h===''){alert('開始・終了時刻を正しく入力してください（例：8 と 17）');return;}
+  let n=0;
+  document.querySelectorAll('#kantoku-list .time-range').forEach(tr=>{
+    const s=tr.querySelector('.time-start'), e=tr.querySelector('.time-end'), hi=tr.querySelector('.hours-inp');
+    if(s)s.value=st;
+    if(e)e.value=en;
+    if(hi)hi.value=h;
+    n++;
+  });
+  saveSetting('work-start',st);
+  saveSetting('work-end',en);
+  calcTotals();markUnsaved();
+  showStatus(`監督${n}名に ${st}〜${en}（${h}h）を反映しました ✓`,'ok');
+}
+
 // 作業ブロック（会社）内の全作業員に就業時間を反映
 function applyBulkTime(btn){
   const bar=btn.closest('.bulk-time-bar');
@@ -8190,6 +8222,10 @@ function setReportMode(mode){
 function applyReportModeVisibility(isNippou){
   document.querySelectorAll('.worker-chip .time-range, .jk-chip .hours-inp, .jk-chip .tr-h').forEach(el=>{
     el.style.display=isNippou?'':'none';
+  });
+  // 監督の就業時間欄（ラベルごと）
+  document.querySelectorAll('#kantoku-list .fg').forEach(el=>{
+    if(el.querySelector('.kantoku-hours')) el.style.display=isNippou?'':'none';
   });
   document.querySelectorAll('.bulk-time-bar').forEach(el=>{
     el.style.display=isNippou?'flex':'none';
