@@ -373,6 +373,11 @@ body.mode-nippou .uchiawase-only{display:none !important;}
 .anzen-check-table{width:100%;border-collapse:collapse;}
 .anzen-check-table th{background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;padding:6px 8px;text-align:center;border:1px solid var(--border);}
 .anzen-check-table td{padding:5px 8px;border:1px solid var(--border);font-size:12px;vertical-align:middle;}
+/* 行を交互に色付け（縞模様）で見やすく */
+.anzen-check-table tbody tr:nth-child(even) td{background:rgba(59,130,246,0.05);}
+.anzen-check-table tbody tr:hover td{background:rgba(59,130,246,0.12);}
+/* カテゴリの区切りを太線で強調 */
+.anzen-check-table tr.cat-start td{border-top:2.5px solid var(--accent3);}
 .anzen-check-table .cat-cell{background:rgba(59,130,246,0.08);font-weight:600;color:var(--accent3);text-align:center;writing-mode:horizontal-tb;min-width:40px;}
 .anzen-chk{width:20px;height:20px;accent-color:var(--accent2);cursor:pointer;display:block;margin:0 auto;}
 .anzen-cat-group{margin-bottom:12px;}
@@ -1639,8 +1644,9 @@ body.mode-nippou .uchiawase-only{display:none !important;}
     <div class="card-title">✅ 安全巡視点検マスタ <button class="btn btn-blue btn-sm" onclick="syncMasterToGAS(getSetting('gas-url'))" style="margin-left:auto;font-size:11px">📤 GASへ保存</button></div>
     <div class="master-input-row">
       <div class="fg"><label>カテゴリ</label>
-        <input type="text" id="az-cat" placeholder="般・玉掛・重機・足場など" list="az-cat-list">
-        <datalist id="az-cat-list"></datalist>
+        <input type="text" id="az-cat" placeholder="般・玉掛・重機・足場など" autocomplete="off"
+          onfocus="showAzCatChips()" oninput="showAzCatChips()">
+        <div class="input-chips" id="az-cat-chips"></div>
       </div>
       <div class="fg w2"><label>点検項目</label>
         <input type="text" id="az-item" placeholder="現場内の整理、整頓、清掃">
@@ -2272,7 +2278,7 @@ function loadDB(){
         {id:4,name:'除草剤（ラウンドアップ）',risk:'mid',hazards:['環境有害性'],ppe:['保護手袋','防護マスク','保護メガネ','長袖・長ズボン'],note:'リスクアセスメント義務対象。散布後は手洗い徹底。河川・水路への流出防止。'},
         {id:5,name:'（除草剤）エスプラネードライトフロアブル',risk:'mid',hazards:['環境有害性','皮膚刺激'],ppe:['保護手袋','防護マスク','保護メガネ','長袖・長ズボン'],note:'土壌処理型除草剤。散布時は風向きに注意。河川・水路への流出防止。散布後は手洗い徹底。'},
         {id:6,name:'（除草剤）デスティニーWDG',risk:'mid',hazards:['環境有害性'],ppe:['保護手袋','防護マスク','保護メガネ','長袖・長ズボン'],note:'水田畦畔・非農耕地用除草剤。水系への流出厳禁。調製・散布時はマスク着用。'},
-        {id:7,name:'アスファルト混合物',risk:'mid',hazards:['高温','熱傷リスク','有害ガス'],ppe:['耐熱手袋','防塵・防毒マスク','保護メガネ','長袖・長ズボン','安全靴'],note:'敷均し時は160℃前後の高温。直接接触で重篤な熱傷のおそれ。加熱時の煙・臭気に注意。風通しを確保。'},
+        {id:7,name:'アスファルト合材',risk:'mid',hazards:['高温','熱傷リスク','有害ガス'],ppe:['耐熱手袋','防塵・防毒マスク','保護メガネ','長袖・長ズボン','安全靴'],note:'敷均し時は160℃前後の高温。直接接触で重篤な熱傷のおそれ。加熱時の煙・臭気に注意。風通しを確保。'},
         {id:8,name:'塗装（路面標示塗料）',risk:'low',hazards:['引火性','有機溶剤'],ppe:['保護手袋','防毒マスク','保護メガネ'],note:'火気厳禁。有機溶剤含有製品は換気を十分に確保。皮膚・目への付着注意。'},
         {id:9,name:'剥離剤',risk:'high',hazards:['腐食性','皮膚刺激','目への重篤な損傷'],ppe:['耐薬品手袋','保護メガネ（フルフェイス推奨）','防毒マスク','防護服'],note:'強腐食性。皮膚・目への接触は重篤な損傷のおそれ。接触時は直ちに大量の水で洗い流し医療機関へ。'},
         {id:10,name:'ウレタン塗料',risk:'mid',hazards:['引火性','有機溶剤','皮膚刺激','呼吸器刺激'],ppe:['保護手袋','防毒マスク（有機ガス用）','保護メガネ','長袖・長ズボン'],note:'有機溶剤含有。火気厳禁。塗装中・乾燥中は換気を十分に確保。密閉空間での使用は特に注意。'}
@@ -2809,7 +2815,7 @@ function renderAnzenCheckArea(){
     const items=[...DB.anzenItems.filter(a=>a.cat===cat)].sort((a,b)=>a.order-b.order);
     items.forEach((item,i)=>{
       const rowspan=i===0?` rowspan="${items.length}"`:'';
-      html+=`<tr>
+      html+=`<tr${i===0?' class="cat-start"':''}>
         ${i===0?`<td class="cat-cell"${rowspan}>${cat}</td>`:''}
         <td>${item.item}</td>
         <td style="text-align:center"><input type="checkbox" class="anzen-chk" id="az-am-${item.id}"></td>
@@ -3079,7 +3085,7 @@ function addKagaku(){
   showStatus(`「${name}」を登録しました ✓`,'ok');
 }
 function deleteKagaku(id){
-  DB.kagaku=DB.kagaku.filter(k=>k.id!==id);saveDB();renderKagakuMaster();refreshKagakuSelects();
+  DB.kagaku=DB.kagaku.filter(k=>String(k.id)!==String(id));saveDB();renderKagakuMaster();refreshKagakuSelects();
 }
 function renderKagakuMaster(){
   const riskMap={high:'高',mid:'中',low:'低'};
@@ -4419,21 +4425,62 @@ function onKoushuInput(id){
 }
 
 // 工種行を追加（同じ作業ブロック内に複数の工種を追加）
+// 安全巡視点検マスタ：カテゴリのチップ表示（iPad対応）
+function showAzCatChips(){
+  const el=document.getElementById('az-cat-chips');
+  if(!el)return;
+  const cats=[...new Set(DB.anzenItems.map(a=>a.cat))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'ja'));
+  const cur=document.getElementById('az-cat')?.value||'';
+  const list=cur?cats.filter(c=>c.includes(cur)):cats;
+  if(list.length===0){el.innerHTML='';return;}
+  el.innerHTML=list.map(c=>
+    `<span onclick="document.getElementById('az-cat').value='${String(c).replace(/'/g,"\\'")}';document.getElementById('az-cat-chips').innerHTML='';">${c}</span>`
+  ).join('');
+}
+
 function addKoushuRow(blockId){
   const container=document.getElementById('koushu-rows-'+blockId);
   if(!container)return;
-  const rid='kr_'+Date.now();
-  const row=document.createElement('div');
-  row.className='koushu-row';
-  row.id=rid;
-  row.style.cssText='display:grid;grid-template-columns:2fr 2fr 2fr 1.5fr auto;gap:4px;margin-bottom:3px;';
-  row.innerHTML=`
-    <input type="text" class="kr-ko" placeholder="工種" list="koushu-list" autocomplete="off" style="font-size:12px;padding:5px 6px">
-    <input type="text" class="kr-sh" placeholder="種別" autocomplete="off" style="font-size:12px;padding:5px 6px">
-    <input type="text" class="kr-sa" placeholder="作業内容" autocomplete="off" style="font-size:12px;padding:5px 6px">
-    <input type="text" class="kr-biko" placeholder="備考" style="font-size:12px;padding:5px 6px">
-    <button onclick="document.getElementById('${rid}').remove()" style="background:none;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:0 4px">✕</button>`;
-  container.appendChild(row);
+  const rid='kr_'+Date.now()+Math.floor(Math.random()*1000);
+  const wrap=document.createElement('div');
+  wrap.id=rid+'-wrap';
+  wrap.innerHTML=`
+    <div class="koushu-row" id="${rid}" style="display:grid;grid-template-columns:2fr 2fr 2fr 1.5fr auto;gap:4px;margin-bottom:3px">
+      <input type="text" class="kr-ko" placeholder="工種" autocomplete="off" style="font-size:12px;padding:5px 6px"
+        onfocus="showRowChips('${rid}','ko')" oninput="showRowChips('${rid}','ko')">
+      <input type="text" class="kr-sh" placeholder="種別" autocomplete="off" style="font-size:12px;padding:5px 6px"
+        onfocus="showRowChips('${rid}','sh')">
+      <input type="text" class="kr-sa" placeholder="作業内容" autocomplete="off" style="font-size:12px;padding:5px 6px"
+        onfocus="showRowChips('${rid}','sa')">
+      <input type="text" class="kr-biko" placeholder="備考" style="font-size:12px;padding:5px 6px">
+      <button onclick="document.getElementById('${rid}-wrap').remove()" style="background:none;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:0 4px">✕</button>
+    </div>
+    <div class="input-chips" id="${rid}-chips" style="margin-bottom:4px"></div>`;
+  container.appendChild(wrap);
+}
+
+// 追加工種行のチップ表示（iPad対応・工種→種別→作業内容で連動）
+function showRowChips(rid,field){
+  const row=document.getElementById(rid);
+  const chipEl=document.getElementById(rid+'-chips');
+  if(!row||!chipEl)return;
+  const ko=row.querySelector('.kr-ko')?.value||'';
+  const sh=row.querySelector('.kr-sh')?.value||'';
+  let list=[], targetClass='';
+  if(field==='ko'){
+    list=[...new Set(DB.koushu.map(k=>k.koushu))].sort((a,b)=>koushuRank(a)-koushuRank(b)||a.localeCompare(b,'ja'));
+    targetClass='kr-ko';
+  }else if(field==='sh'){
+    list=[...new Set(DB.koushu.filter(k=>!ko||k.koushu===ko).map(k=>k.shubetsu))].filter(Boolean).sort();
+    targetClass='kr-sh';
+  }else{
+    list=[...new Set(DB.koushu.filter(k=>(!ko||k.koushu===ko)&&(!sh||k.shubetsu===sh)).map(k=>k.sagyou))].filter(Boolean).sort();
+    targetClass='kr-sa';
+  }
+  if(list.length===0){chipEl.innerHTML='';return;}
+  chipEl.innerHTML=list.map(v=>
+    `<span onclick="const r=document.getElementById('${rid}');r.querySelector('.${targetClass}').value='${String(v).replace(/'/g,"\\'")}';document.getElementById('${rid}-chips').innerHTML='';">${v}</span>`
+  ).join('');
 }
 
 // 工種行のデータを取得（保存用）
