@@ -1451,6 +1451,10 @@ body.mode-nippou .uchiawase-only{display:none !important;}
       <div class="fg w-half"><label>応急措置（吸入）</label><input type="text" id="kg-fa-inhale" placeholder="新鮮な空気の場所へ移動→受診"></div>
       <div class="fg w-half"><label>応急措置（飲み込み）</label><input type="text" id="kg-fa-ingest" placeholder="口をすすぎ水を飲ませる→受診"></div>
     </div>
+    <div class="form-row" style="margin-bottom:6px">
+      <div class="fg w-half"><label>リスク低減措置（作業手順・換気・設備対策など）</label><textarea id="kg-reduce" placeholder="例：屋外で風上から散布／密閉容器で運搬／換気を確保" style="min-height:44px"></textarea></div>
+      <div class="fg w-half"><label>残留リスク（低減後も残る注意点）</label><textarea id="kg-residual" placeholder="例：飛沫による皮膚付着の可能性→保護具の確実な着用" style="min-height:44px"></textarea></div>
+    </div>
     <div class="form-row" style="margin-bottom:8px">
       <div class="fg w-full"><label>取扱い注意事項</label><textarea id="kg-note" placeholder="保管方法・使用上の注意など" style="min-height:48px"></textarea></div>
     </div>
@@ -2867,21 +2871,86 @@ function onKagakuMultiSelect(blockId){
   if(selected.length===0){detail.innerHTML='';return;}
   const riskMap={high:'高',mid:'中',low:'低'};
   const riskCls={high:'risk-high',mid:'risk-mid',low:'risk-low'};
+  // この打合せ簿ブロックの化学物質PPEチェック状態を保持
+  const prevPpe=window._kagakuPpeState&&window._kagakuPpeState[blockId]||{};
   detail.innerHTML=selected.map(kid=>{
     const item=DB.kagaku.find(k=>k.id==kid);if(!item)return '';
-    return `<div style="border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:8px;margin-bottom:6px;background:var(--bg2)">
-      <div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:5px">⚗️ ${item.name}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px">
-        <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">リスクレベル</div>
-          <span class="risk-badge ${riskCls[item.risk]||'risk-mid'}">${riskMap[item.risk]||'中'}</span></div>
+    const ppeList=item.ppe||[];
+    return `<div style="border:1px solid rgba(239,68,68,0.25);border-radius:6px;padding:10px;margin-bottom:8px;background:var(--bg2)">
+      <div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:6px">⚗️ ${item.name}
+        <span class="risk-badge ${riskCls[item.risk]||'risk-mid'}" style="margin-left:6px">リスク${riskMap[item.risk]||'中'}</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px">
         <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">危険有害性</div>
           <div>${(item.hazards||[]).map(h=>`<span class="ppe-tag" style="color:var(--danger)">${h}</span>`).join('')||'—'}</div></div>
-        <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">必要PPE</div>
-          <div>${(item.ppe||[]).map(p=>`<span class="ppe-tag">${p}</span>`).join('')||'—'}</div></div>
+      </div>
+      ${item.reduce?`<div style="font-size:11px;color:var(--text2);background:rgba(59,130,246,0.06);padding:6px 8px;border-radius:5px;margin-bottom:6px">🛡️ <b>リスク低減措置</b>：${item.reduce}</div>`:''}
+      ${item.residual?`<div style="font-size:11px;color:#d97706;background:rgba(245,158,11,0.08);padding:6px 8px;border-radius:5px;margin-bottom:6px">⚠️ <b>残留リスク</b>：${item.residual}</div>`:''}
+      <div style="margin-bottom:4px">
+        <div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:5px">✅ 本日の着用保護具（チェック）</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${ppeList.length?ppeList.map((p,i)=>{
+            const cid=`ppe-${blockId}-${kid}-${i}`;
+            const checked=(prevPpe[kid]||[]).includes(p)?'checked':'';
+            return `<label class="kagaku-chk" style="font-size:11px"><input type="checkbox" class="ppechk-${blockId}" data-kid="${kid}" value="${p}" ${checked} onchange="saveKagakuPpeState('${blockId}')"> ${p}</label>`;
+          }).join(''):'<span style="font-size:11px;color:var(--text3)">必要PPEがマスタに未登録です</span>'}
+        </div>
       </div>
       ${item.note?`<div style="font-size:11px;color:var(--text2);margin-top:6px;line-height:1.5">📌 ${item.note}</div>`:''}
     </div>`;
-  }).join('');
+  }).join('')+`
+    <!-- 確認サイン -->
+    <div style="border:1px dashed rgba(239,68,68,0.4);border-radius:8px;padding:10px;margin-top:6px;background:rgba(239,68,68,0.03)">
+      <div style="font-size:11px;font-weight:600;color:var(--danger);margin-bottom:6px">✍️ 化学物質取扱い・保護具着用の確認（作業主任者／確認者）</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+        <div class="fg" style="max-width:180px"><label style="font-size:10px;color:var(--text3)">確認者名</label>
+          <input type="text" id="kagaku-confirmer-${blockId}" placeholder="氏名" style="padding:4px 8px;font-size:12px" oninput="markUnsaved()"></div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">確認サイン</div>
+          <canvas class="sign-canvas" id="kagaku-sign-${blockId}" width="220" height="60" style="border:1px solid var(--border);border-radius:4px;background:#fff;touch-action:none"></canvas>
+          <div><button type="button" class="btn btn-ghost btn-sm" style="font-size:10px;margin-top:2px" onclick="clearCanvas('kagaku-sign-${blockId}')">消去</button></div>
+        </div>
+      </div>
+    </div>`;
+  // サインcanvasを初期化
+  setTimeout(()=>{ initCanvas('kagaku-sign-'+blockId); },100);
+}
+
+// 保存済みの化学物質記録（着用チェック・確認者・サイン）を復元
+function restoreKagakuRecord(id,block){
+  const blockId='kagaku-block-'+id;
+  // 着用保護具チェック
+  if(block.kagakuPpe){
+    Object.entries(block.kagakuPpe).forEach(([kid,ppes])=>{
+      (ppes||[]).forEach(p=>{
+        const cb=[...document.querySelectorAll('.ppechk-'+blockId)].find(c=>c.dataset.kid==kid&&c.value===p);
+        if(cb) cb.checked=true;
+      });
+    });
+    saveKagakuPpeState(blockId);
+  }
+  // 確認者名
+  if(block.kagakuConfirmer){
+    const inp=document.getElementById('kagaku-confirmer-'+blockId);
+    if(inp) inp.value=block.kagakuConfirmer;
+  }
+  // 確認サイン
+  if(block.kagakuSign){
+    const c=document.getElementById('kagaku-sign-'+blockId);
+    if(c){ const ctx=c.getContext('2d'); const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0); img.src=block.kagakuSign; }
+  }
+}
+
+// この打合せ簿ブロックのPPE着用チェック状態を保持
+function saveKagakuPpeState(blockId){
+  if(!window._kagakuPpeState) window._kagakuPpeState={};
+  const state={};
+  document.querySelectorAll('.ppechk-'+blockId+':checked').forEach(c=>{
+    const kid=c.dataset.kid;
+    if(!state[kid]) state[kid]=[];
+    state[kid].push(c.value);
+  });
+  window._kagakuPpeState[blockId]=state;
+  markUnsaved();
 }
 
 function onKagakuSelect(blockId, selId){
@@ -2932,10 +3001,12 @@ function addKagaku(){
   const faSkin=document.getElementById('kg-fa-skin')?.value.trim()||'';
   const faInhale=document.getElementById('kg-fa-inhale')?.value.trim()||'';
   const faIngest=document.getElementById('kg-fa-ingest')?.value.trim()||'';
-  DB.kagaku.push({id:Date.now(),name,maker,ingredient,cas,risk,hazards,ppe,faEye,faSkin,faInhale,faIngest,note});
+  const reduce=document.getElementById('kg-reduce')?.value.trim()||'';
+  const residual=document.getElementById('kg-residual')?.value.trim()||'';
+  DB.kagaku.push({id:Date.now(),name,maker,ingredient,cas,risk,hazards,ppe,faEye,faSkin,faInhale,faIngest,reduce,residual,note});
   saveDB();
   // フォームクリア
-  ['kg-name','kg-maker','kg-ingredient','kg-cas','kg-note','kg-fa-eye','kg-fa-skin','kg-fa-inhale','kg-fa-ingest'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['kg-name','kg-maker','kg-ingredient','kg-cas','kg-note','kg-fa-eye','kg-fa-skin','kg-fa-inhale','kg-fa-ingest','kg-reduce','kg-residual'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.querySelectorAll('#kg-hazard-checks input,#kg-ppe-checks input').forEach(c=>c.checked=false);
   renderKagakuMaster();refreshKagakuSelects();
   showStatus(`「${name}」を登録しました ✓`,'ok');
@@ -5532,6 +5603,7 @@ function doLoadYesterdayFrom(sourceDate){
                 if(cb){cb.checked=true;}
               });
               onKagakuMultiSelect('kagaku-block-'+id);
+              setTimeout(()=>restoreKagakuRecord(id,block),200);
             },150);
           },250);
         }
@@ -5950,6 +6022,11 @@ function collectUchiawaseSnapshot(){
       kotsuCompanies:[],
       // 化学物質（選択された化学物質ID）
       kagakuSelected:[...(document.querySelectorAll(`.kgchk-kagaku-block-${id}`)||[])].filter(c=>c.checked).map(c=>c.value),
+      // 化学物質：本日の着用保護具チェック（kid別）
+      kagakuPpe:(function(){const st={};document.querySelectorAll(`.ppechk-kagaku-block-${id}:checked`).forEach(c=>{const k=c.dataset.kid;(st[k]=st[k]||[]).push(c.value);});return st;})(),
+      // 化学物質：確認者名・確認サイン
+      kagakuConfirmer:document.getElementById(`kagaku-confirmer-kagaku-block-${id}`)?.value||'',
+      kagakuSign:(function(){const c=document.getElementById(`kagaku-sign-kagaku-block-${id}`);return (c&&!isCanvasBlank(c))?c.toDataURL('image/png'):'';})(),
       // 危険要因チェック状態
       kikenChecked:[...(document.querySelectorAll(`#card-${id} .kiken-factor`)||[])].filter(f=>f.dataset.state==='ari').map(f=>f.dataset.type),
       kikenNashi:[...(document.querySelectorAll(`#card-${id} .kiken-factor`)||[])].filter(f=>f.dataset.state==='nashi').map(f=>f.dataset.type),
@@ -6304,6 +6381,7 @@ function restoreUchiawase(snap){
                 if(cb){cb.checked=true;}
               });
               onKagakuMultiSelect('kagaku-block-'+id);
+              setTimeout(()=>restoreKagakuRecord(id,block),200);
             },150);
           },250);
         }
@@ -6704,10 +6782,23 @@ function exportPDF(returnBodyOnly=false){
       }
     });
     if(!used.length) return '';
+    // 着用した保護具（全ブロックのチェック済みを統合）
+    const wornPpe=[];
+    document.querySelectorAll('[class*="ppechk-kagaku-block-"]:checked').forEach(cb=>{
+      if(!wornPpe.includes(cb.value)) wornPpe.push(cb.value);
+    });
+    // 確認者名・確認サイン（最初に入力のあるブロックを採用）
+    let confirmer='', signImg='';
+    document.querySelectorAll('[id^="kagaku-confirmer-kagaku-block-"]').forEach(inp=>{
+      if(!confirmer && inp.value) confirmer=inp.value;
+    });
+    document.querySelectorAll('[id^="kagaku-sign-kagaku-block-"]').forEach(c=>{
+      if(!signImg && c.tagName==='CANVAS' && !isCanvasBlank(c)) signImg=c.toDataURL('image/png');
+    });
     return `<div class="p-kagaku-block">
-      <div class="p-section-title">⚗️ 化学物質使用</div>
+      <div class="p-section-title">⚗️ 化学物質リスクアセスメント</div>
       <table class="p-kagaku-table">
-        <thead><tr><th>物質名</th><th>リスク</th><th>危険有害性</th><th>必要PPE</th><th>注意事項</th></tr></thead>
+        <thead><tr><th>物質名</th><th>リスク</th><th>危険有害性</th><th>必要PPE</th><th>リスク低減措置</th><th>残留リスク</th></tr></thead>
         <tbody>${used.map(k=>{
           const riskMap={high:'高',mid:'中',low:'低'};
           return `<tr>
@@ -6715,10 +6806,24 @@ function exportPDF(returnBodyOnly=false){
             <td style="text-align:center">${riskMap[k.risk]||'中'}</td>
             <td>${(k.hazards||[]).join('・')||'—'}</td>
             <td>${(k.ppe||[]).join('・')||'—'}</td>
-            <td>${k.note||'—'}</td>
+            <td>${k.reduce||'—'}</td>
+            <td>${k.residual||'—'}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>
+      <div style="display:flex;gap:4mm;margin-top:1.5mm;align-items:flex-end">
+        <div style="flex:1">
+          <div style="font-size:6.3pt;color:#16a34a;font-weight:600;margin-bottom:0.5mm">✅ 本日の着用保護具</div>
+          <div style="border:0.5px solid #b0bcd4;border-radius:2px;padding:1mm;min-height:6mm;font-size:6.9pt">${wornPpe.length?wornPpe.join('　／　'):'（未チェック）'}</div>
+        </div>
+        <div style="min-width:44mm">
+          <div style="font-size:6.3pt;color:#dc2626;font-weight:600;margin-bottom:0.5mm">✍️ 取扱い・着用確認（作業主任者等）</div>
+          <div style="border:0.5px solid #b0bcd4;border-radius:2px;padding:1mm;display:flex;align-items:center;gap:2mm">
+            <span style="font-size:6.9pt">${confirmer||''}</span>
+            ${signImg?`<img src="${signImg}" style="height:9mm;max-width:34mm;object-fit:contain">`:'<span style="font-size:6pt;color:#999">サイン欄</span>'}
+          </div>
+        </div>
+      </div>
     </div>`;
   }
 
