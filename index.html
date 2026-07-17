@@ -352,6 +352,20 @@ body.mode-nippou .uchiawase-only{display:none !important;}
 .input-chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;max-height:120px;overflow-y:auto;}
 .input-chips span{padding:2px 8px;border-radius:10px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);white-space:nowrap;}
 .input-chips span:active{background:rgba(245,158,11,0.2);border-color:var(--accent);}
+/* 候補チップの種類別の色分け（工種・種別・作業内容を落ち着いたトーンで区別）※既定＝ダーク */
+.chips-ko span{background:rgba(251,113,133,0.12);border-color:rgba(251,113,133,0.35);color:#fda4af;}
+.chips-sh span{background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.35);color:#c4b5fd;}
+.chips-sa span{background:rgba(45,212,191,0.12);border-color:rgba(45,212,191,0.35);color:#5eead4;}
+.chips-ko span:hover{background:rgba(251,113,133,0.2);}
+.chips-sh span:hover{background:rgba(167,139,250,0.2);}
+.chips-sa span:hover{background:rgba(45,212,191,0.2);}
+.chips-ko span:active{background:rgba(251,113,133,0.3);}
+.chips-sh span:active{background:rgba(167,139,250,0.3);}
+.chips-sa span:active{background:rgba(45,212,191,0.3);}
+/* 明るいテーマでは文字・枠を濃いめに */
+body.light-theme .chips-ko span{background:rgba(225,29,72,0.07);border-color:rgba(225,29,72,0.3);color:#be123c;}
+body.light-theme .chips-sh span{background:rgba(124,58,237,0.07);border-color:rgba(124,58,237,0.3);color:#6d28d9;}
+body.light-theme .chips-sa span{background:rgba(13,148,136,0.07);border-color:rgba(13,148,136,0.32);color:#0f766e;}
 .kiken-chk-label:hover{background:var(--bg2);}
 .kiken-chk-label input[type=checkbox]{width:14px;height:14px;}
 /* 危険要因：あり/なし セグメント */
@@ -4460,11 +4474,18 @@ function addKoushuRow(blockId){
   container.appendChild(wrap);
 }
 
+// 同じ作業カード内の、指定以外の候補チップをすべて消す
+function clearOtherChips(cardEl,keepId){
+  if(!cardEl)return;
+  cardEl.querySelectorAll('.input-chips').forEach(el=>{ if(el.id!==keepId) el.innerHTML=''; });
+}
+
 // 追加工種行のチップ表示（iPad対応・工種→種別→作業内容で連動）
 function showRowChips(rid,field){
   const row=document.getElementById(rid);
   const chipEl=document.getElementById(rid+'-chips');
   if(!row||!chipEl)return;
+  clearOtherChips(row.closest('.card'), rid+'-chips');  // 他の行の候補を消す
   const ko=row.querySelector('.kr-ko')?.value||'';
   const sh=row.querySelector('.kr-sh')?.value||'';
   let list=[], targetClass='';
@@ -4479,6 +4500,8 @@ function showRowChips(rid,field){
     targetClass='kr-sa';
   }
   if(list.length===0){chipEl.innerHTML='';return;}
+  // 種類別の色分けクラスを設定
+  chipEl.className='input-chips '+(field==='ko'?'chips-ko':field==='sh'?'chips-sh':'chips-sa');
   chipEl.innerHTML=list.map(v=>
     `<span onclick="const r=document.getElementById('${rid}');r.querySelector('.${targetClass}').value='${String(v).replace(/'/g,"\\'")}';document.getElementById('${rid}-chips').innerHTML='';">${v}</span>`
   ).join('');
@@ -4507,6 +4530,7 @@ function getKoushuRows(blockId){
 function showKoushuChips(id){
   const el=document.getElementById('ko-chips-'+id);
   if(!el)return;
+  clearOtherChips(el.closest('.card'),'ko-chips-'+id);
   const list=[...new Set(DB.koushu.map(k=>k.koushu))].sort((a,b)=>koushuRank(a)-koushuRank(b)||a.localeCompare(b,'ja'));
   el.innerHTML=list.map(k=>
     `<span onclick="document.getElementById('ko-inp-${id}').value='${k}';onKoushuInput('${id}');this.parentElement.innerHTML='';">${k}</span>`
@@ -4516,6 +4540,7 @@ function showKoushuChips(id){
 function showShubetsuChips(id){
   const el=document.getElementById('sh-chips-'+id);
   if(!el)return;
+  clearOtherChips(el.closest('.card'),'sh-chips-'+id);
   const koushu=document.getElementById('ko-inp-'+id)?.value||'';
   const list=[...new Set(DB.koushu.filter(k=>k.koushu===koushu).map(k=>k.shubetsu))].sort();
   el.innerHTML=list.map(s=>
@@ -4526,6 +4551,7 @@ function showShubetsuChips(id){
 function showSagyouChips(id){
   const el=document.getElementById('sa-chips-'+id);
   if(!el)return;
+  clearOtherChips(el.closest('.card'),'sa-chips-'+id);
   const koushu=document.getElementById('ko-inp-'+id)?.value||'';
   const shubetsu=document.getElementById('sh-inp-'+id)?.value||'';
   const list=[...new Set(DB.koushu.filter(k=>k.koushu===koushu&&k.shubetsu===shubetsu).map(k=>k.sagyou))].sort();
@@ -5119,9 +5145,9 @@ function buildSagyouHTML(id,idx){
         <datalist id="shubetsu-list-${id}"></datalist>
         <datalist id="sagyou-list-${id}"></datalist>
       </div>
-      <div id="ko-chips-${id}" class="input-chips"></div>
-      <div id="sh-chips-${id}" class="input-chips"></div>
-      <div id="sa-chips-${id}" class="input-chips"></div>
+      <div id="ko-chips-${id}" class="input-chips chips-ko"></div>
+      <div id="sh-chips-${id}" class="input-chips chips-sh"></div>
+      <div id="sa-chips-${id}" class="input-chips chips-sa"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="addKoushuRow('${id}')" style="font-size:11px">＋ 工種を追加</button>
         <button class="btn btn-ghost btn-sm" onclick="quickAddKoushuFromInput('${id}')" style="font-size:11px">
