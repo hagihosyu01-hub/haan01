@@ -370,6 +370,7 @@ body.mode-nippou .uchiawase-only{display:none !important;}
 .kiken-ai-content{font-size:12px;color:var(--text2);line-height:1.7;}
 
 /* 安全巡視点検表 */
+.koushu-row > datalist, datalist{display:none !important;}
 .anzen-check-table{width:100%;border-collapse:collapse;}
 .anzen-check-table th{background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;padding:6px 8px;text-align:center;border:1px solid var(--border);}
 .anzen-check-table td{padding:5px 8px;border:1px solid var(--border);font-size:12px;vertical-align:middle;}
@@ -5110,13 +5111,13 @@ function buildSagyouHTML(id,idx){
             oninput="onKoushuInput('${id}')" onfocus="showKoushuChips('${id}')" autocomplete="off" style="font-size:12px;padding:5px 6px">
           <input type="text" id="sh-inp-${id}" placeholder="種別" list="shubetsu-list-${id}"
             oninput="onShubetsuInput('${id}')" onfocus="showShubetsuChips('${id}')" autocomplete="off" style="font-size:12px;padding:5px 6px">
-          <datalist id="shubetsu-list-${id}"></datalist>
           <input type="text" id="sa-inp-${id}" placeholder="作業内容" list="sagyou-list-${id}"
             oninput="applyShijiPattern('${id}');autoFillShiki('${id}')" onfocus="showSagyouChips('${id}')" autocomplete="off" style="font-size:12px;padding:5px 6px">
-          <datalist id="sagyou-list-${id}"></datalist>
           <input type="text" id="biko-${id}" placeholder="備考" style="font-size:12px;padding:5px 6px">
           <span></span>
         </div>
+        <datalist id="shubetsu-list-${id}"></datalist>
+        <datalist id="sagyou-list-${id}"></datalist>
       </div>
       <div id="ko-chips-${id}" class="input-chips"></div>
       <div id="sh-chips-${id}" class="input-chips"></div>
