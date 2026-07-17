@@ -395,6 +395,15 @@ body.light-theme .chips-sa span{background:rgba(13,148,136,0.07);border-color:rg
 .anzen-check-table tr.cat-start td{border-top:2.5px solid var(--accent3);}
 .anzen-check-table .cat-cell{background:rgba(59,130,246,0.08);font-weight:600;color:var(--accent3);text-align:center;writing-mode:horizontal-tb;min-width:40px;}
 .anzen-chk{width:20px;height:20px;accent-color:var(--accent2);cursor:pointer;display:block;margin:0 auto;}
+/* 安全巡視点検：3状態ボタン（レ点→✕→斜線(該当なし)→空白） */
+.anzen-chk3{width:30px;height:30px;border:1.5px solid var(--border);border-radius:6px;background:var(--bg2);cursor:pointer;font-size:17px;font-weight:800;line-height:1;display:block;margin:0 auto;padding:0;transition:all 0.1s;}
+.anzen-chk3[data-state="ok"]{color:#16a34a;border-color:#16a34a;background:rgba(22,163,74,0.1);}
+.anzen-chk3[data-state="ok"]::after{content:"✓";}
+.anzen-chk3[data-state="ng"]{color:#dc2626;border-color:#dc2626;background:rgba(239,68,68,0.1);}
+.anzen-chk3[data-state="ng"]::after{content:"✕";}
+.anzen-chk3[data-state="na"]{color:var(--text3);border-color:var(--border);background:repeating-linear-gradient(135deg,transparent,transparent 3px,rgba(150,150,150,0.25) 3px,rgba(150,150,150,0.25) 5px);}
+.anzen-chk3[data-state="na"]::after{content:"／";}
+.anzen-chk3[data-state=""]::after{content:"";}
 .anzen-cat-group{margin-bottom:12px;}
 .anzen-cat-title{font-size:11px;font-weight:600;color:var(--accent3);background:rgba(59,130,246,0.08);padding:4px 10px;border-radius:4px;margin-bottom:4px;display:inline-block;}
 @media(max-width:600px){
@@ -2691,8 +2700,8 @@ function loadAnzenJunshiForDate(date){
   if(rec){
     // チェック復元
     (rec.checks||[]).forEach(ch=>{
-      const am=document.getElementById('az-am-'+ch.id);if(am)am.checked=ch.am;
-      const pm=document.getElementById('az-pm-'+ch.id);if(pm)pm.checked=ch.pm;
+      const am=document.getElementById('az-am-'+ch.id);if(am)am.dataset.state=ch.am||'';
+      const pm=document.getElementById('az-pm-'+ch.id);if(pm)pm.dataset.state=ch.pm||'';
     });
     const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
     set('anzen-am-time',rec.amTime);
@@ -2701,8 +2710,8 @@ function loadAnzenJunshiForDate(date){
   }else{
     // データなし：チェックと所見をクリア
     (DB.anzenItems||[]).forEach(item=>{
-      const am=document.getElementById('az-am-'+item.id);if(am)am.checked=false;
-      const pm=document.getElementById('az-pm-'+item.id);if(pm)pm.checked=false;
+      const am=document.getElementById('az-am-'+item.id);if(am)am.dataset.state='';
+      const pm=document.getElementById('az-pm-'+item.id);if(pm)pm.dataset.state='';
     });
     ['anzen-am-time','anzen-pm-time','anzen-shoken'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   }
@@ -2734,8 +2743,8 @@ async function saveAnzenJunshi(){
   // チェック状態を収集
   const checks=[];
   DB.anzenItems.forEach(item=>{
-    const am=document.getElementById('az-am-'+item.id)?.checked||false;
-    const pm=document.getElementById('az-pm-'+item.id)?.checked||false;
+    const am=document.getElementById('az-am-'+item.id)?.dataset.state||'';
+    const pm=document.getElementById('az-pm-'+item.id)?.dataset.state||'';
     checks.push({id:item.id,cat:item.cat,item:item.item,am,pm});
   });
   const snap={
@@ -2800,8 +2809,8 @@ function restoreAnzenJunshi(snap){
   set('anzen-pm-time',snap.pmTime);
   set('anzen-shoken',snap.shoken);
   (snap.checks||[]).forEach(c=>{
-    const am=document.getElementById('az-am-'+c.id);if(am)am.checked=c.am;
-    const pm=document.getElementById('az-pm-'+c.id);if(pm)pm.checked=c.pm;
+    const am=document.getElementById('az-am-'+c.id);if(am)am.dataset.state=c.am||'';
+    const pm=document.getElementById('az-pm-'+c.id);if(pm)pm.dataset.state=c.pm||'';
   });
 }
 
@@ -2833,8 +2842,8 @@ function renderAnzenCheckArea(){
       html+=`<tr${i===0?' class="cat-start"':''}>
         ${i===0?`<td class="cat-cell"${rowspan}>${cat}</td>`:''}
         <td>${item.item}</td>
-        <td style="text-align:center"><input type="checkbox" class="anzen-chk" id="az-am-${item.id}"></td>
-        <td style="text-align:center"><input type="checkbox" class="anzen-chk" id="az-pm-${item.id}"></td>
+        <td style="text-align:center"><button type="button" class="anzen-chk3" id="az-am-${item.id}" data-state="" onclick="toggleAnzenCheck(this)"></button></td>
+        <td style="text-align:center"><button type="button" class="anzen-chk3" id="az-pm-${item.id}" data-state="" onclick="toggleAnzenCheck(this)"></button></td>
       </tr>`;
     });
   });
@@ -4503,8 +4512,35 @@ function showRowChips(rid,field){
   // 種類別の色分けクラスを設定
   chipEl.className='input-chips '+(field==='ko'?'chips-ko':field==='sh'?'chips-sh':'chips-sa');
   chipEl.innerHTML=list.map(v=>
-    `<span onclick="const r=document.getElementById('${rid}');r.querySelector('.${targetClass}').value='${String(v).replace(/'/g,"\\'")}';document.getElementById('${rid}-chips').innerHTML='';">${v}</span>`
+    `<span onclick="const r=document.getElementById('${rid}');r.querySelector('.${targetClass}').value='${String(v).replace(/'/g,"\\'")}';document.getElementById('${rid}-chips').innerHTML='';${field==='sa'?`autoFillShikiForRow('${rid}');`:''}">${v}</span>`
   ).join('');
+}
+
+// 追加工種行の工種・作業内容から資機材を補充（1行目のautoFillShikiの追加行版）
+// 安全巡視点検：3状態トグル（空白→レ点→✕→斜線(該当なし)→空白）
+function toggleAnzenCheck(btn){
+  const order=['','ok','ng','na'];
+  const cur=btn.dataset.state||'';
+  const next=order[(order.indexOf(cur)+1)%order.length];
+  btn.dataset.state=next;
+  markUnsaved();
+}
+
+function autoFillShikiForRow(rid){
+  const row=document.getElementById(rid);if(!row)return;
+  const card=row.closest('.card');if(!card)return;
+  const blockId=card.id.replace('card-','');
+  const koushu=(row.querySelector('.kr-ko')?.value||'').trim();
+  const sagyou=(row.querySelector('.kr-sa')?.value||'').trim();
+  if(!koushu||!sagyou)return;
+  const entry=DB.koushu.find(k=>k.koushu===koushu&&k.sagyou===sagyou);
+  if(!entry||!entry.shiki)return;
+  const containerId='shiki-rows-'+blockId;
+  if(!document.getElementById(containerId))return;
+  // 既存の資機材名（重複を避けて追加）
+  const existing=getShikiValues(containerId).map(v=>String(v).split('×')[0]);
+  const items=entry.shiki.split(/[,，、]/).map(s=>s.trim()).filter(Boolean);
+  items.forEach(item=>{ if(!existing.includes(item)) addShikiRowTo(containerId,blockId,item,'1'); });
 }
 
 // 工種行のデータを取得（保存用）
@@ -7042,8 +7078,9 @@ function exportPDF(returnBodyOnly=false){
     cats.forEach(cat=>{
       html+=`<tr><td colspan="4" class="p-anzen-cat">${cat}</td></tr>`;
       DB.anzenItems.filter(i=>i.cat===cat).sort((a,b)=>(a.order||0)-(b.order||0)).forEach(item=>{
-        const am=document.getElementById('az-am-'+item.id)?.checked?'✓':'';
-        const pm=document.getElementById('az-pm-'+item.id)?.checked?'✓':'';
+        const stMark=s=>s==='ok'?'✓':s==='ng'?'✕':s==='na'?'／':'';
+        const am=stMark(document.getElementById('az-am-'+item.id)?.dataset.state||'');
+        const pm=stMark(document.getElementById('az-pm-'+item.id)?.dataset.state||'');
         html+=`<tr><td colspan="2" class="p-anzen-item">${item.item}</td><td class="p-anzen-check">${am}</td><td class="p-anzen-check">${pm}</td></tr>`;
       });
     });
@@ -7412,7 +7449,7 @@ ${'PLACEHOLDER_BODY'}
     <div class="p-legend">※資格凡例：(対)対払い機　(チ)チェーンソー　(玉)玉掛　(重)車両系建設機械　(高)高所作業車　(移)移動式クレーン　(ロ)ローラー</div>
   </div>
   <div class="p-right">
-    <div class="p-anzen-title">安全巡視点検表<br><span class="p-anzen-sub">（レ点チェック、空欄＝該当なし）</span></div>
+    <div class="p-anzen-title">安全巡視点検表<br><span class="p-anzen-sub">（✓良好・✕要是正・／該当なし）</span></div>
     ${buildAnzenTable()}
     <div class="p-footer">出力：${new Date().toLocaleString('ja-JP')}</div>
   </div>
