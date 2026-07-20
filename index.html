@@ -5155,13 +5155,10 @@ function applyJissekiState(id){
   const val=document.getElementById('jisseki-state-'+id)?.value||'done';
   const reasonArea=document.getElementById('jisseki-reason-'+id);
   const card=document.getElementById('card-'+id);
-  if(val==='cancel'){
-    if(reasonArea) reasonArea.style.display='block';
-    if(card) card.classList.add('sagyou-cancelled');
-  }else{
-    if(reasonArea) reasonArea.style.display='none';
-    if(card) card.classList.remove('sagyou-cancelled');
-  }
+  // 中止ON かつ 日報モードのときだけ理由欄を出す
+  const show=(val==='cancel'&&getReportMode()==='nippou');
+  if(reasonArea) reasonArea.style.display=show?'block':'none';
+  if(card) card.classList.toggle('sagyou-cancelled',val==='cancel');
   calcTotals();
 }
 
@@ -5192,11 +5189,10 @@ function buildSagyouHTML(id,idx){
         </label>
       </div>
       <!-- 中止理由（中止時のみ表示・日報モード） -->
-      <div id="jisseki-reason-${id}" class="nippou-only" style="display:none;margin-bottom:10px">
+      <div id="jisseki-reason-${id}" class="jisseki-reason" style="display:none;margin-bottom:10px">
         <input type="text" id="reason-${id}" placeholder="中止理由（例：雨天のため翌日に延期）" style="width:100%;padding:5px 8px;font-size:12px">
-        <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;color:var(--text2);line-height:1.4">
-          <input type="checkbox" id="cancel-count-${id}" style="accent-color:var(--accent2);flex:0 0 auto">
-          <span style="flex:1 1 auto;min-width:0">中止だが労務集計に含める</span>
+        <label style="display:block;margin-top:6px;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">
+          <input type="checkbox" id="cancel-count-${id}" style="accent-color:var(--accent2);vertical-align:-2px;margin-right:5px">中止だが労務集計に含める
         </label>
       </div>
       <!-- ①工種・種別・作業内容（複数行対応） -->
@@ -8577,6 +8573,12 @@ function applyReportModeVisibility(isNippou){
   });
   document.querySelectorAll('.bulk-time-bar').forEach(el=>{
     el.style.display=isNippou?'flex':'none';
+  });
+  // 中止理由欄は「中止ON かつ 日報モード」のときだけ表示
+  document.querySelectorAll('.jisseki-reason').forEach(el=>{
+    const id=el.id.replace('jisseki-reason-','');
+    const st=document.getElementById('jisseki-state-'+id)?.value||'done';
+    el.style.display=(isNippou&&st==='cancel')?'block':'none';
   });
 }
 function getReportMode(){ return document.body.classList.contains('mode-nippou')?'nippou':'uchiawase'; }
