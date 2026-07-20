@@ -356,6 +356,10 @@ body.mode-nippou .uchiawase-only{display:none !important;}
 .chips-ko span{background:rgba(251,113,133,0.12);border-color:rgba(251,113,133,0.35);color:#fda4af;}
 .chips-sh span{background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.35);color:#c4b5fd;}
 .chips-sa span{background:rgba(45,212,191,0.12);border-color:rgba(45,212,191,0.35);color:#5eead4;}
+.chips-shiki span{background:rgba(251,191,36,0.12);border-color:rgba(251,191,36,0.35);color:#fcd34d;}
+.chips-shiki span:hover{background:rgba(251,191,36,0.2);}
+.chips-shiki span:active{background:rgba(251,191,36,0.3);}
+body.light-theme .chips-shiki span{background:rgba(180,83,9,0.07);border-color:rgba(180,83,9,0.3);color:#b45309;}
 .chips-ko span:hover{background:rgba(251,113,133,0.2);}
 .chips-sh span:hover{background:rgba(167,139,250,0.2);}
 .chips-sa span:hover{background:rgba(45,212,191,0.2);}
@@ -4515,7 +4519,7 @@ function addKoushuRow(blockId){
   if(!container)return;
   const rid='kr_'+Date.now()+Math.floor(Math.random()*1000);
   const wrap=document.createElement('div');
-  wrap.id=rid+'-wrap';
+  wrap.id='krwrap_'+rid;
   wrap.innerHTML=`
     <div class="koushu-row" id="${rid}" style="display:grid;grid-template-columns:2fr 2fr 2fr 1.5fr auto;gap:4px;margin-bottom:3px">
       <input type="text" class="kr-ko" placeholder="工種" autocomplete="off" style="font-size:12px;padding:5px 6px"
@@ -4525,7 +4529,7 @@ function addKoushuRow(blockId){
       <input type="text" class="kr-sa" placeholder="作業内容" autocomplete="off" style="font-size:12px;padding:5px 6px"
         onfocus="showRowChips('${rid}','sa')">
       <input type="text" class="kr-biko" placeholder="備考" style="font-size:12px;padding:5px 6px">
-      <button onclick="document.getElementById('${rid}-wrap').remove()" style="background:none;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:0 4px">✕</button>
+      <button onclick="document.getElementById('krwrap_${rid}').remove()" style="background:none;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:0 4px">✕</button>
     </div>
     <div class="input-chips" id="${rid}-chips" style="margin-bottom:4px"></div>`;
   container.appendChild(wrap);
@@ -5030,24 +5034,48 @@ function getShikiOpts(){return'<option value="">選択</option>'+DB.shiki.map(s=
 function addShikiRowTo(containerId, blockId, name='', qty='1'){
   const container=document.getElementById(containerId);if(!container)return;
   const rid='sk_'+Date.now()+'_'+Math.floor(Math.random()*10000);
-  const dlId='shiki-dl-'+rid;
-  const div=document.createElement('div');
-  div.id=rid;
-  div.style.cssText='display:flex;align-items:center;gap:4px;';
-  const opts=DB.shiki.map(s=>`<option value="${s.name}">`).join('');
+  const wrap=document.createElement('div');
+  wrap.id='skwrap_'+rid;
   // カテゴリ判定（材料は数量・台を非表示）
   const shikiEntry=DB.shiki.find(s=>s.name===name);
   const isMaterial=shikiEntry&&shikiEntry.cat==='材料';
-  div.innerHTML=`
-    <input type="text" class="shiki-name" placeholder="資機材を入力または選択" list="${dlId}" autocomplete="off"
-      value="${(name||'').replace(/"/g,'&quot;')}"
-      onblur="autoRegisterShikiValue(this.value);updateShikiQtyVisibility(this)"
-      style="flex:1;padding:5px 8px;font-size:12px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text)">
-    <datalist id="${dlId}">${opts}</datalist>
-    <input type="number" class="shiki-qty" min="1" max="99" value="${qty||1}" style="width:40px;padding:5px 2px;font-size:12px;text-align:center;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);${isMaterial?'display:none':''}">
-    <span class="shiki-unit" style="font-size:11px;color:var(--text2);white-space:nowrap;${isMaterial?'display:none':''}">台</span>
-    <button onclick="document.getElementById('${rid}').remove()" style="background:none;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:0 4px;flex-shrink:0">✕</button>`;
-  container.appendChild(div);
+  wrap.innerHTML=`
+    <div id="${rid}" style="display:flex;align-items:center;gap:4px">
+      <input type="text" class="shiki-name" placeholder="資機材を入力または選択" autocomplete="off"
+        value="${(name||'').replace(/"/g,'&quot;')}"
+        onfocus="showShikiChips('${rid}')" oninput="showShikiChips('${rid}')"
+        onblur="autoRegisterShikiValue(this.value);updateShikiQtyVisibility(this)"
+        style="flex:1;padding:5px 8px;font-size:12px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text)">
+      <input type="number" class="shiki-qty" min="1" max="99" value="${qty||1}" style="width:40px;padding:5px 2px;font-size:12px;text-align:center;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);${isMaterial?'display:none':''}">
+      <span class="shiki-unit" style="font-size:11px;color:var(--text2);white-space:nowrap;${isMaterial?'display:none':''}">台</span>
+      <button onclick="document.getElementById('skwrap_${rid}').remove()" style="background:none;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:0 4px;flex-shrink:0">✕</button>
+    </div>
+    <div class="input-chips chips-shiki" id="${rid}-chips" style="margin-bottom:3px"></div>`;
+  container.appendChild(wrap);
+}
+
+// 資機材の候補チップ表示（iPad対応・datalistの代わり）
+function showShikiChips(rid){
+  const row=document.getElementById(rid);
+  const chipEl=document.getElementById(rid+'-chips');
+  if(!row||!chipEl)return;
+  clearOtherChips(row.closest('.card'), rid+'-chips');
+  const kw=(row.querySelector('.shiki-name')?.value||'').trim();
+  let list=[...new Set((DB.shiki||[]).map(s=>s.name).filter(Boolean))];
+  if(kw) list=list.filter(n=>n.includes(kw));
+  if(list.length===0){chipEl.innerHTML='';return;}
+  chipEl.innerHTML=list.map(n=>
+    `<span onclick="pickShiki('${rid}','${String(n).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">${n}</span>`
+  ).join('');
+}
+// 候補チップから資機材を選択
+function pickShiki(rid,name){
+  const row=document.getElementById(rid);if(!row)return;
+  const inp=row.querySelector('.shiki-name');
+  if(inp){inp.value=name;updateShikiQtyVisibility(inp);}
+  const chipEl=document.getElementById(rid+'-chips');
+  if(chipEl)chipEl.innerHTML='';
+  markUnsaved();
 }
 // 資機材名変更時に数量欄の表示/非表示を切り替え
 function updateShikiQtyVisibility(inputEl){
