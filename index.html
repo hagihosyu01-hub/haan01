@@ -325,7 +325,7 @@ body.mode-nippou .uchiawase-only{display:none !important;}
 .kiken-check-title{font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px;}
 .kiken-check-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:4px;}
 .kiken-chk-label{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);transition:all 0.15s;user-select:none;}
-.jisseki-radio{display:inline-flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);user-select:none;}
+.jisseki-radio{display:inline-flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);user-select:none;white-space:nowrap;}
 .jisseki-radio input{display:none;}
 .jisseki-radio input:checked+span{font-weight:700;}
 .jisseki-radio:has(input[value="done"]:checked){background:rgba(16,185,129,0.15);border-color:var(--accent2);color:var(--accent2);}
@@ -5146,17 +5146,9 @@ function buildSagyouHTML(id,idx){
       <!-- 中止理由（中止時のみ表示・日報モード） -->
       <div id="jisseki-reason-${id}" class="nippou-only" style="display:none;margin-bottom:10px">
         <input type="text" id="reason-${id}" placeholder="中止理由（例：雨天のため翌日に延期）" style="width:100%;padding:5px 8px;font-size:12px">
-        <label style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:11px;color:var(--text2)">
-          <input type="checkbox" id="cancel-count-${id}" style="accent-color:var(--accent2)">
-          中止だが人員を労務集計に含める
-        </label>
-      </div>
-      <!-- 中止・変更の理由（状態に応じて表示） -->
-      <div id="jisseki-reason-${id}" style="display:none;margin-bottom:10px">
-        <input type="text" id="reason-${id}" placeholder="理由・変更内容を入力" style="width:100%;padding:5px 8px;font-size:12px">
-        <label style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:11px;color:var(--text2)">
-          <input type="checkbox" id="cancel-count-${id}" style="accent-color:var(--accent2)">
-          中止だが人員を労務集計に含める
+        <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;color:var(--text2);line-height:1.4">
+          <input type="checkbox" id="cancel-count-${id}" style="accent-color:var(--accent2);flex:0 0 auto">
+          <span style="flex:1 1 auto;min-width:0">中止だが労務集計に含める</span>
         </label>
       </div>
       <!-- ①工種・種別・作業内容（複数行対応） -->
