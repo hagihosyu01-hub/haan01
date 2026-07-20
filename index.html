@@ -4031,21 +4031,28 @@ function renderJimuinSelects(){
   const kl=document.getElementById('kantoku-list');
   if(kl){
     kl.innerHTML=DB.kantokuMaster.length===0?'<p style="font-size:12px;color:var(--text3)">監督マスタに登録してください</p>':
-      sortedKantokuMaster().map(k=>`<div class="form-row" style="margin-bottom:5px;align-items:center">
+      sortedKantokuMaster().map(k=>`<div class="kantoku-item" style="margin-bottom:6px">
+        <div class="form-row" style="margin-bottom:3px;align-items:center">
         <div style="min-width:90px;font-size:11px;color:var(--text2)">${ROLE_MAP[k.role]}</div>
         <div style="font-size:13px;font-weight:500;flex:1">${k.name}</div>
         <div class="fg" style="max-width:70px"><label>人数</label><input type="number" class="kantoku-ninzu" value="1" min="0" style="padding:4px 7px" oninput="calcTotals()"></div>
-        <div class="fg nippou-only" style="max-width:200px;flex:0 0 200px"><label>就業時間</label>
-          <span class="time-range">
-            <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getWorkStart()}" oninput="onWorkTimeChange(this)">
-            <span class="tr-sep">〜</span>
-            <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${getWorkEnd()}" oninput="onWorkTimeChange(this)">
-            <input class="hours-inp kantoku-hours" type="number" step="0.5" min="0" title="実働時間（自動計算・手入力可）"
-              value="${calcWorkHours(getWorkStart(),getWorkEnd())}"
-              oninput="calcTotals()">
-            <span class="tr-h">h</span>
-          </span>
+        <div class="fg nippou-only" style="max-width:250px;flex:0 0 250px"><label>就業時間</label>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span class="time-range">
+              <input class="time-start" type="text" inputmode="numeric" placeholder="8" value="${getWorkStart()}" oninput="onWorkTimeChange(this)">
+              <span class="tr-sep">〜</span>
+              <input class="time-end" type="text" inputmode="numeric" placeholder="17" value="${getWorkEnd()}" oninput="onWorkTimeChange(this)">
+              <input class="hours-inp kantoku-hours" type="number" step="0.5" min="0" title="実働時間（自動計算・手入力可）"
+                value="${calcWorkHours(getWorkStart(),getWorkEnd())}"
+                oninput="calcTotals()">
+              <span class="tr-h">h</span>
+            </span>
+            <button type="button" class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 7px;white-space:nowrap"
+              title="夜間・緊急など、別の時間帯を追加します" onclick="addKantokuTime(this)">＋時間</button>
+          </div>
         </div>
+        </div>
+        <div class="kantoku-extra nippou-only"></div>
       </div>`).join('');
   }
   refreshJCompanySelect();calcTotals();
@@ -4289,6 +4296,47 @@ function selectHanAll(btn,checked){
 }
 
 // ===== 一括時間 =====
+// ===== 監督：就業時間の追加（夜間・緊急など別時間帯） =====
+function addKantokuTime(btn,start='',end=''){
+  const item=btn.closest?btn.closest('.kantoku-item'):btn;
+  if(!item)return null;
+  const box=item.querySelector('.kantoku-extra');
+  if(!box)return null;
+  const h=(start&&end)?calcWorkHours(start,end):'';
+  const div=document.createElement('div');
+  div.className='kantoku-extra-row';
+  div.style.cssText='display:flex;align-items:center;gap:6px;margin:3px 0 0 96px;flex-wrap:wrap';
+  div.innerHTML=`
+    <span style="font-size:10px;color:var(--text3);white-space:nowrap">追加</span>
+    <span class="time-range">
+      <input class="time-start" type="text" inputmode="numeric" placeholder="20" value="${start}" oninput="onWorkTimeChange(this)">
+      <span class="tr-sep">〜</span>
+      <input class="time-end" type="text" inputmode="numeric" placeholder="24" value="${end}" oninput="onWorkTimeChange(this)">
+      <input class="hours-inp kantoku-extra-hours" type="number" step="0.5" min="0" title="実働時間（自動計算・手入力可）"
+        value="${h}" oninput="calcTotals();markUnsaved()">
+      <span class="tr-h">h</span>
+    </span>
+    <button type="button" title="この時間を削除" onclick="this.closest('.kantoku-extra-row').remove();calcTotals();markUnsaved()"
+      style="background:none;border:none;color:var(--danger);font-size:14px;cursor:pointer;padding:0 4px">✕</button>`;
+  box.appendChild(div);
+  calcTotals();markUnsaved();
+  return div;
+}
+// その監督行の追加時間の合計（h）
+function kantokuExtraHours(row){
+  const item=row.closest('.kantoku-item');
+  if(!item)return 0;
+  let ex=0;
+  item.querySelectorAll('.kantoku-extra-hours').forEach(e=>{ex+=parseFloat(e.value)||0;});
+  return ex;
+}
+// 保存データから監督1人の合計時間を求める（本体＋追加分）
+function kantokuTotalHours(k){
+  let h=parseFloat(k.hours)||0;
+  (k.extra||[]).forEach(e=>{h+=parseFloat(e.hours)||0;});
+  return h;
+}
+
 // 監督全員に就業時間を一括反映
 function applyKantokuBulkTime(btn){
   const bar=btn.closest('.nippou-only-flex');
@@ -4298,7 +4346,7 @@ function applyKantokuBulkTime(btn){
   const h=calcWorkHours(st,en);
   if(h===''){alert('開始・終了時刻を正しく入力してください（例：8 と 17）');return;}
   let n=0;
-  document.querySelectorAll('#kantoku-list .time-range').forEach(tr=>{
+  document.querySelectorAll('#kantoku-list .form-row .time-range').forEach(tr=>{
     const s=tr.querySelector('.time-start'), e=tr.querySelector('.time-end'), hi=tr.querySelector('.hours-inp');
     if(s)s.value=st;
     if(e)e.value=en;
@@ -5400,7 +5448,7 @@ function calcTotals(){
   let kantokuCount=0, kantokuHours=0;
   document.querySelectorAll('#kantoku-list .form-row').forEach(row=>{
     const n=parseInt(row.querySelector('.kantoku-ninzu')?.value||0)||0;
-    const h=parseFloat(row.querySelector('.kantoku-hours')?.value||0)||0;
+    const h=(parseFloat(row.querySelector('.kantoku-hours')?.value||0)||0)+kantokuExtraHours(row);
     kantokuCount+=n;
     kantokuHours+=n*h;
   });
@@ -6165,7 +6213,12 @@ function collectUchiawaseSnapshot(){
       ninzu:parseInt(row.querySelector('.kantoku-ninzu')?.value||0)||0,
       hours:parseFloat(row.querySelector('.kantoku-hours')?.value||0)||0,
       start:row.querySelector('.time-start')?.value||'',
-      end:row.querySelector('.time-end')?.value||''
+      end:row.querySelector('.time-end')?.value||'',
+      extra:[...(row.closest('.kantoku-item')?.querySelectorAll('.kantoku-extra-row')||[])].map(er=>({
+        start:er.querySelector('.time-start')?.value||'',
+        end:er.querySelector('.time-end')?.value||'',
+        hours:parseFloat(er.querySelector('.kantoku-extra-hours')?.value||0)||0
+      })).filter(e=>e.hours>0||e.start||e.end)
     });
   });
   document.querySelectorAll('#s1-junkai-members .jk-chip').forEach(chip=>{
@@ -6450,6 +6503,17 @@ function restoreUchiawase(snap){
           const hi=row.querySelector('.kantoku-hours');if(hi)hi.value=kd.hours;
           const st=row.querySelector('.time-start');if(st&&kd.start&&!isNaN(parseHM(kd.start)))st.value=kd.start;
           const en=row.querySelector('.time-end');if(en&&kd.end&&!isNaN(parseHM(kd.end)))en.value=kd.end;
+          // 追加した就業時間（夜間・緊急など）を復元
+          const item=row.closest('.kantoku-item');
+          const box=item?.querySelector('.kantoku-extra');
+          if(box){
+            box.innerHTML='';
+            (kd.extra||[]).forEach(e=>{
+              const r=addKantokuTime(item,e.start||'',e.end||'');
+              const hi=r?.querySelector('.kantoku-extra-hours');
+              if(hi&&e.hours) hi.value=e.hours;
+            });
+          }
         }
       });
       calcTotals();
@@ -6742,7 +6806,7 @@ function exportPDF(returnBodyOnly=false){
   let kantokuCount=0, kantokuHoursPDF=0;
   document.querySelectorAll('#kantoku-list .form-row').forEach(row=>{
     const n=parseInt(row.querySelector('.kantoku-ninzu')?.value||0)||0;
-    const h=parseFloat(row.querySelector('.kantoku-hours')?.value||0)||0;
+    const h=(parseFloat(row.querySelector('.kantoku-hours')?.value||0)||0)+kantokuExtraHours(row);
     kantokuCount+=n;
     kantokuHoursPDF+=n*h;
   });
@@ -9405,7 +9469,7 @@ async function loadNendo(){
         (b.companies||[]).forEach(co=>{ if(co.jisha)(co.workers||[]).forEach(w=>add(w.name,'作業員',date,parseFloat(w.hours)||0)); });
         (b.kotsuCompanies||[]).forEach(co=>{ if(co.jisha)(co.workers||[]).forEach(w=>add(w.name,'作業員',date,parseFloat(w.hours)||0)); });
       });
-      (data.kantoku||[]).forEach(k=>{ if(parseInt(k.ninzu)>0) add(k.name,'監督',date,parseFloat(k.hours)||0); });
+      (data.kantoku||[]).forEach(k=>{ if(parseInt(k.ninzu)>0) add(k.name,'監督',date,kantokuTotalHours(k)); });
     });
   });
 
@@ -9554,7 +9618,7 @@ async function loadZangyo(){
       });
       (data.kantoku||[]).forEach(k=>{
         if(!(parseInt(k.ninzu)>0))return;
-        add(k.name,'監督',date,parseFloat(k.hours)||0);
+        add(k.name,'監督',date,kantokuTotalHours(k));
       });
     });
     return people;
