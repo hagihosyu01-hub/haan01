@@ -879,6 +879,7 @@ body.light-theme .chips-sa span{background:rgba(13,148,136,0.07);border-color:rg
     <div class="card-title">📆 会社カレンダー（休日設定）
       <div class="ml">
         <button class="btn btn-ghost btn-sm" onclick="calAutoWeekend()">土日を休日に一括設定</button>
+        <button class="btn btn-primary btn-sm" onclick="applyReiwa8Holidays()">📅 令和8年度カレンダーを反映</button>
         <button class="btn btn-ghost btn-sm" onclick="calClearMonth()">リセット</button>
       </div>
     </div>
@@ -9158,6 +9159,48 @@ function calAutoWeekend(){
   });
   saveDB();renderCompanyCal();
   showStatus(`土日${n}日を休日に設定しました ✓（祝日や振替は個別にクリックで調整）`,'ok');
+}
+
+// 令和8年度（2026/4〜2027/3）会社休日カレンダー（協和建設工業）
+// 「■会社休日カレンダー（令和8年度)協議用2.pdf」に基づく祝日一覧（土日は別途自動判定）
+const REIWA8_MONTHS=[{y:2026,m:4},{y:2026,m:5},{y:2026,m:6},{y:2026,m:7},{y:2026,m:8},{y:2026,m:9},
+  {y:2026,m:10},{y:2026,m:11},{y:2026,m:12},{y:2027,m:1},{y:2027,m:2},{y:2027,m:3}];
+const REIWA8_HOLIDAYS=[
+  '2026-04-29', // 昭和の日
+  '2026-05-04', // みどりの日
+  '2026-05-05', // こどもの日
+  '2026-05-06', // 振替休日
+  '2026-07-20', // 海の日
+  '2026-08-11', // 山の日
+  '2026-09-21', // 敬老の日
+  '2026-09-22', // 国民の休日
+  '2026-09-23', // 秋分の日
+  '2026-10-12', // スポーツの日
+  '2026-11-03', // 文化の日
+  '2026-11-23', // 勤労感謝の日
+  '2027-01-01', // 元日
+  '2027-01-11', // 成人の日
+  '2027-02-11', // 建国記念の日
+  '2027-02-23', // 天皇誕生日
+  '2027-03-22'  // 振替休日（春分の日3/21が日曜のため）
+];
+// 土日（法定休日/法定外休日）＋祝日17日を一括反映（休日合計121日＝PDF記載と一致）
+function applyReiwa8Holidays(){
+  if(!confirm('令和8年度（2026/4〜2027/3）の休日カレンダーを設定します。\n会社休日カレンダーPDFに基づき、土日104日＋祝日17日（計121日）を反映します。\n\n既存の設定は上書きされます。よろしいですか？'))return;
+  if(!DB.calendar) DB.calendar={};
+  let n=0;
+  REIWA8_MONTHS.forEach(({y,m})=>{
+    const last=new Date(y,m,0).getDate();
+    for(let d=1;d<=last;d++){
+      const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const wd=new Date(y,m-1,d).getDay();
+      if(wd===0){DB.calendar[date]='houtei';n++;}
+      else if(wd===6){DB.calendar[date]='gai';n++;}
+      else if(REIWA8_HOLIDAYS.includes(date)){DB.calendar[date]='gai';n++;}
+    }
+  });
+  saveDB();renderCompanyCal();
+  showStatus(`令和8年度の休日 ${n}日を設定しました ✓（土日104日＋祝日17日）`,'ok');
 }
 
 function calClearMonth(){
