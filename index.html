@@ -2320,6 +2320,7 @@ function loadDB(){
     if(!DB.calendar) DB.calendar={};
     if(!DB.yukyu) DB.yukyu={};
     if(!DB.gloves) DB.gloves=[];
+    unpackLocalMasters();   // 設定に同期済みの内容があれば取り込む
     // 既存データのマイグレーション
     const typeMap={jisha:'元請',motouke:'元請',shita:'一次下請',shita1:'一次下請',shita2:'二次下請',ichi:'一次下請',ni:'二次下請'};
     DB.companies.forEach(c=>{if(typeMap[c.type]) c.type=typeMap[c.type];});
@@ -3344,6 +3345,7 @@ function toggleKotsu(blockId, trackEl){
   }
 }
 function saveDB(){
+  packLocalMasters();   // カレンダー・有給・手袋を設定に載せる（スプレッドシート同期用）
   localStorage.setItem('anzen_db3',JSON.stringify(DB));
   // GAS URLが設定されていればマスタも自動同期
   const gasUrl=getSetting('gas-url');
@@ -3481,7 +3483,11 @@ async function loadMasterFromGAS(){
         if(k!=='gemini_key') DB.settings[k]=m.settings[k];
       });
     }
+    // 会社カレンダー・有給・保護手袋を設定から取り出す
+    unpackLocalMasters();
     localStorage.setItem('anzen_db3',JSON.stringify(DB));
+    // 取得した内容を画面に反映
+    try{ initNendoSelect();initYukyuNendo();renderCompanyCal();renderYukyu();renderGloveMaster(); }catch(e){}
     const savedAt=data.savedAt||'';
     if(statusEl) statusEl.textContent=`✅ マスタ取得完了（最終保存：${savedAt}）`;
     return true;
@@ -3489,6 +3495,27 @@ async function loadMasterFromGAS(){
     if(statusEl) statusEl.textContent='⚠️ GAS接続エラー（ローカルデータを使用）: '+e.message;
     return false;
   }
+}
+
+// ===== 会社カレンダー・有給・保護手袋のスプレッドシート同期 =====
+// GAS側は「設定」シートに任意のキーを保存できるため、そこに載せて同期する
+function packLocalMasters(){
+  try{
+    DB.settings['calendar-data']=DB.calendar||{};
+    DB.settings['yukyu-data']=DB.yukyu||{};
+    DB.settings['gloves-data']=DB.gloves||[];
+  }catch(e){}
+}
+function unpackLocalMasters(){
+  const pick=(key,cur)=>{
+    let v=DB.settings?DB.settings[key]:null;
+    if(v===undefined||v===null||v==='') return cur;
+    if(typeof v==='string'){ try{ v=JSON.parse(v); }catch(e){ return cur; } }
+    return v;
+  };
+  DB.calendar=pick('calendar-data',DB.calendar||{});
+  DB.yukyu=pick('yukyu-data',DB.yukyu||{});
+  DB.gloves=pick('gloves-data',DB.gloves||[]);
 }
 
 function saveSetting(k,v){
