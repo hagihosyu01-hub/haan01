@@ -1416,6 +1416,11 @@ body.light-theme .chips-sa span{background:rgba(13,148,136,0.07);border-color:rg
       <button class="btn btn-blue btn-sm" onclick="loadKyPatternPreset()">📥 工種マスタ標準パターンを読み込む</button>
       <span style="font-size:11px;color:var(--text3);margin-left:6px">現在の工種に対応した標準パターン（47件）を登録。既存は保持されます。</span>
     </div>
+    <div style="margin-bottom:10px;padding:8px;background:rgba(217,119,6,0.06);border-radius:6px;border:1px solid var(--border)">
+      <button class="btn btn-ghost btn-sm" onclick="checkKoushuKyLink()">🔍 連携していない作業内容をチェック</button>
+      <span style="font-size:11px;color:var(--text3);margin-left:6px">工種マスタとKYパターンで、片方にしか無い「工種＋作業内容」の組み合わせを一覧表示します。</span>
+      <div id="koushu-ky-link-report" style="margin-top:8px"></div>
+    </div>
 
     <!-- 登録フォーム -->
     <details style="margin-bottom:12px" open>
@@ -4914,6 +4919,36 @@ function findKyPatterns(koushu,sagyou,tenki){
     if(p.tenki==='共通')return true;
     return t.includes(p.tenki)||p.tenki.includes(t);
   });
+}
+
+// 工種マスタとKYパターンマスタで「工種＋作業内容」が片方にしか無いものを一覧表示
+function checkKoushuKyLink(){
+  const koushuAlias={'道路巡回工':'巡視・巡回工'};
+  const norm=k=>koushuAlias[k]||k;
+  const koushuKeys=new Set((DB.koushu||[]).map(k=>norm(k.koushu)+'｜'+k.sagyou));
+  const kyKeys=new Set((DB.kyPattern||[]).map(p=>norm(p.koushu)+'｜'+p.sagyou));
+  const onlyKoushu=[...koushuKeys].filter(x=>!kyKeys.has(x)).map(x=>x.split('｜'));
+  const onlyKy=[...kyKeys].filter(x=>!koushuKeys.has(x)).map(x=>x.split('｜'));
+  const area=document.getElementById('koushu-ky-link-report');
+  if(!area)return;
+  if((DB.koushu||[]).length===0 && (DB.kyPattern||[]).length===0){
+    area.innerHTML='<div style="font-size:12px;color:var(--text3)">工種マスタ・KYパターンともにまだ登録がありません</div>';
+    return;
+  }
+  if(onlyKoushu.length===0 && onlyKy.length===0){
+    area.innerHTML='<div style="font-size:12px;color:var(--accent2);font-weight:600">✓ 全て連携しています（片方にしか無い組み合わせはありません）</div>';
+    return;
+  }
+  const listHtml=(list,label,color)=>list.length?`
+    <div style="margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:4px">${label}（${list.length}件）</div>
+      <div style="font-size:11px;line-height:1.8">${list.map(([k,s])=>`・${k} ＞ ${s}`).join('<br>')}</div>
+    </div>`:'';
+  area.innerHTML=`
+    <div style="border:1px solid rgba(217,119,6,0.35);border-radius:6px;padding:10px;background:var(--bg2)">
+      ${listHtml(onlyKoushu,'⚠ 工種マスタにあるがKYパターンに無い（危険予知が自動表示されない）','#d97706')}
+      ${listHtml(onlyKy,'⚠ KYパターンにあるが工種マスタに無い（資機材が自動入力されない）','#dc2626')}
+    </div>`;
 }
 
 // 旧select版との互換（AI生成で使用）
