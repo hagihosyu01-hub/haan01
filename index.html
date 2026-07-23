@@ -4421,6 +4421,45 @@ function applyBulkHours(){
 }
 
 // ===== 工種マスタ =====
+// 工種＋作業内容の名称変更を、工種マスタ⇔KYパターンマスタの双方に連動させる
+// （旧・工種＋旧・作業内容が一致する行を全て新しい名前に更新。天候違いの複数KY行や
+//   種別違いで作業内容が同じ工種マスタ行もまとめて追従する）
+function renameSagyouLinked(oldKoushu, oldSagyou, newKoushu, newSagyou){
+  if(oldKoushu===newKoushu && oldSagyou===newSagyou) return 0;
+  let n=0;
+  (DB.koushu||[]).forEach(k=>{
+    if(k.koushu===oldKoushu && k.sagyou===oldSagyou){ k.koushu=newKoushu; k.sagyou=newSagyou; n++; }
+  });
+  (DB.kyPattern||[]).forEach(p=>{
+    if(p.koushu===oldKoushu && p.sagyou===oldSagyou){ p.koushu=newKoushu; p.sagyou=newSagyou; n++; }
+  });
+  return n;
+}
+// 工種マスタの行を直接編集（工種名・種別・作業内容）。工種名または作業内容名の変更はKYパターンにも連動
+function renameKoushuField(id, field, val){
+  const rec=DB.koushu.find(x=>String(x.id)===String(id));
+  if(!rec)return;
+  val=val.trim();
+  const labelMap={koushu:'工種',shubetsu:'種別',sagyou:'作業内容'};
+  if(!val){
+    showStatus(labelMap[field]+'は空にできません','err');
+    renderKoushuMaster();
+    return;
+  }
+  if(rec[field]===val)return;
+  if(field==='shubetsu'){
+    rec.shubetsu=val;
+    saveDB();renderKoushuMaster();refreshKoushuDatalist();
+    showStatus('種別を更新しました ✓','ok');
+    return;
+  }
+  const oldKoushu=rec.koushu, oldSagyou=rec.sagyou;
+  rec[field]=val;
+  const n=renameSagyouLinked(oldKoushu, oldSagyou, rec.koushu, rec.sagyou);
+  saveDB();renderKoushuMaster();refreshKoushuDatalist();
+  if(typeof renderKyPatternMaster==='function') renderKyPatternMaster();
+  showStatus(`${labelMap[field]}を変更しました ✓${n>0?`（KYパターン等 ${n}件も連動して更新）`:''}`,'ok');
+}
 function addKoushu(){
   const k=document.getElementById('k-koushu').value.trim();
   const s=document.getElementById('k-shubetsu').value.trim();
@@ -4754,16 +4793,25 @@ function saveKyPattern(){
   });
   if(!DB.kyPattern)DB.kyPattern=[];
   const data={koushu,sagyou,tenki,shiji,kikens};
+  let linkedMsg='';
   if(window._editingKypId){
     const idx=DB.kyPattern.findIndex(p=>p.id===window._editingKypId);
-    if(idx>=0)DB.kyPattern[idx]={...DB.kyPattern[idx],...data};
+    if(idx>=0){
+      const oldKoushu=DB.kyPattern[idx].koushu, oldSagyou=DB.kyPattern[idx].sagyou;
+      DB.kyPattern[idx]={...DB.kyPattern[idx],...data};
+      if(oldKoushu!==koushu||oldSagyou!==sagyou){
+        const n=renameSagyouLinked(oldKoushu,oldSagyou,koushu,sagyou);
+        if(n>0) linkedMsg=`（工種マスタ等 ${n}件も連動して更新）`;
+      }
+    }
     window._editingKypId=null;
   }else{
     data.id=Date.now();
     DB.kyPattern.push(data);
   }
   saveDB();clearKypForm();renderKyPatternMaster();
-  showStatus('KYパターンを登録しました ✓','ok');
+  if(typeof renderKoushuMaster==='function') renderKoushuMaster();
+  showStatus('KYパターンを登録しました ✓'+linkedMsg,'ok');
 }
 function renderKyPatternMaster(){
   const tbody=document.getElementById('kyp-tbody');if(!tbody)return;
@@ -4899,9 +4947,12 @@ function renderKoushuMaster(){
   }else{
     tbody.innerHTML=filtered.map(k=>`
       <tr>
-        <td>${k.koushu}</td>
-        <td>${k.shubetsu}</td>
-        <td>${k.sagyou}</td>
+        <td><input type="text" value="${k.koushu.replace(/"/g,'&quot;')}" style="width:100%;font-size:12px"
+          onchange="renameKoushuField(${k.id},'koushu',this.value)" list="koushu-list"></td>
+        <td><input type="text" value="${(k.shubetsu||'').replace(/"/g,'&quot;')}" style="width:100%;font-size:12px"
+          onchange="renameKoushuField(${k.id},'shubetsu',this.value)"></td>
+        <td><input type="text" value="${k.sagyou.replace(/"/g,'&quot;')}" style="width:100%;font-size:12px"
+          onchange="renameKoushuField(${k.id},'sagyou',this.value)" title="変更するとKYパターン等の同じ作業も連動して名称が変わります"></td>
         <td>
           <input type="text" id="k-shiki-edit-${k.id}" value="${(k.shiki||'').replace(/"/g,'&quot;')}" placeholder="候補をクリック" style="width:100%;font-size:12px;margin-bottom:3px"
             onchange="updateKoushuShiki(${k.id},this.value)" onfocus="renderShikiChips('k-shiki-edit-${k.id}','k-shiki-chips-${k.id}')">
