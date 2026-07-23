@@ -1418,7 +1418,8 @@ body.light-theme .chips-sa span{background:rgba(13,148,136,0.07);border-color:rg
     </div>
     <div style="margin-bottom:10px;padding:8px;background:rgba(217,119,6,0.06);border-radius:6px;border:1px solid var(--border)">
       <button class="btn btn-ghost btn-sm" onclick="checkKoushuKyLink()">🔍 連携していない作業内容をチェック</button>
-      <span style="font-size:11px;color:var(--text3);margin-left:6px">工種マスタとKYパターンで、片方にしか無い「工種＋作業内容」の組み合わせを一覧表示します。</span>
+      <button class="btn btn-success btn-sm" onclick="bulkAddMissingKyPatterns()">➕ 不足しているKYパターンを空欄で一括登録</button>
+      <span style="font-size:11px;color:var(--text3);margin-left:6px">工種マスタにあってKYパターンに無い組み合わせを、指示事項・危険予知が空欄の状態で追加します（中身は個別に入力）。</span>
       <div id="koushu-ky-link-report" style="margin-top:8px"></div>
     </div>
 
@@ -4949,6 +4950,38 @@ function checkKoushuKyLink(){
       ${listHtml(onlyKoushu,'⚠ 工種マスタにあるがKYパターンに無い（危険予知が自動表示されない）','#d97706')}
       ${listHtml(onlyKy,'⚠ KYパターンにあるが工種マスタに無い（資機材が自動入力されない）','#dc2626')}
     </div>`;
+}
+
+// 工種マスタにあってKYパターンに無い組み合わせを、指示事項・危険予知が空欄の状態で一括登録
+// （中身の文章までは自動生成しない。標準パターンに無い独自の作業内容に対して、
+//   入力欄だけを用意し個別入力の手間を減らすための機能）
+function bulkAddMissingKyPatterns(){
+  const koushuAlias={'道路巡回工':'巡視・巡回工'};
+  const norm=k=>koushuAlias[k]||k;
+  const kyKeys=new Set((DB.kyPattern||[]).map(p=>norm(p.koushu)+'｜'+p.sagyou));
+  const seen=new Set();
+  const toAdd=[];
+  (DB.koushu||[]).forEach(k=>{
+    const key=norm(k.koushu)+'｜'+k.sagyou;
+    if(kyKeys.has(key)||seen.has(key))return;
+    seen.add(key);
+    toAdd.push({koushu:k.koushu,sagyou:k.sagyou});
+  });
+  if(toAdd.length===0){
+    showStatus('工種マスタとKYパターンは既に一致しています。追加はありません','ok');
+    checkKoushuKyLink();
+    return;
+  }
+  const preview=toAdd.slice(0,10).map(x=>'・'+x.koushu+' ＞ '+x.sagyou).join('\n')
+    +(toAdd.length>10?`\n…ほか${toAdd.length-10}件`:'');
+  if(!confirm(`工種マスタにあってKYパターンに無い組み合わせが${toAdd.length}件あります。\n指示事項・危険予知が空欄の状態で一括登録します（中身は登録後に個別入力してください）。\n\n${preview}\n\nよろしいですか？`))return;
+  if(!DB.kyPattern)DB.kyPattern=[];
+  const base=Date.now();
+  toAdd.forEach((x,i)=>{
+    DB.kyPattern.push({id:base+i,koushu:x.koushu,sagyou:x.sagyou,tenki:'共通',shiji:'',kikens:[]});
+  });
+  saveDB();renderKyPatternMaster();checkKoushuKyLink();
+  showStatus(`${toAdd.length}件を空欄で登録しました ✓（指示事項・危険予知は一覧の✏️編集から入力してください）`,'ok');
 }
 
 // 旧select版との互換（AI生成で使用）
