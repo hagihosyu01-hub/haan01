@@ -4788,6 +4788,19 @@ function calcKypPoint(rid){
   }
 }
 // KYパターン登録フォーム：工種・作業内容・天候からAIで指示事項・危険予知を生成
+// 工種マスタから、工種＋作業内容が一致する行の資機材を集める（種別違いの複数行も統合）
+function findShikiForKoushu(koushu, sagyou){
+  const koushuAlias={'道路巡回工':'巡視・巡回工'};
+  const norm=k=>koushuAlias[k]||k;
+  const target=norm(koushu);
+  const shikiSet=new Set();
+  (DB.koushu||[]).forEach(k=>{
+    if(norm(k.koushu)===target && k.sagyou===sagyou && k.shiki){
+      k.shiki.split(/[,，、]/).map(s=>s.trim()).filter(Boolean).forEach(s=>shikiSet.add(s));
+    }
+  });
+  return [...shikiSet];
+}
 async function genKypAI(){
   const koushu=document.getElementById('kyp-koushu').value.trim();
   const sagyou=document.getElementById('kyp-sagyou').value.trim();
@@ -4797,10 +4810,15 @@ async function genKypAI(){
     if(statusEl){statusEl.textContent='工種と作業内容を入力してください';statusEl.style.color='var(--danger)';}
     return;
   }
+  const shikiList=findShikiForKoushu(koushu,sagyou);
+  const shikiText=shikiList.length?shikiList.join('、'):'（工種マスタに登録なし）';
   const prompt=`建設現場の安全管理担当として、以下の作業のKY（危険予知）活動パターンを作成してください。
 工種:${koushu}
 作業内容:${sagyou}
 天候:${tenki}
+使用する資機材:${shikiText}
+
+使用する資機材に起因する危険（巻き込まれ・挟まれ・飛来・感電・転倒・切創など）も具体的に考慮してください。
 
 必ず以下のJSON形式のみで回答してください。他のテキストは一切含めないでください。
 {
@@ -4821,7 +4839,7 @@ kikensは3〜5件程度にしてください。`;
     area.innerHTML='';
     (data.kikens||[]).forEach(k=>addKypKikenRow(k.kiken||'',k.risk||'',k.taisaku||'',k.juu||'',k.kaku||''));
     if((data.kikens||[]).length===0) addKypKikenRow();
-    statusEl.textContent='✓ 生成しました。内容を確認して「このパターンを登録」を押してください';
+    statusEl.textContent=`✓ 生成しました（資機材：${shikiText}）。内容を確認して「このパターンを登録」を押してください`;
     statusEl.style.color='var(--accent2)';
   }catch(e){
     if(statusEl){statusEl.textContent='エラー: '+e.message;statusEl.style.color='var(--danger)';}
