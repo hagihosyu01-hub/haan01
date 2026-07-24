@@ -1453,6 +1453,10 @@ body.light-theme .chips-sa span{background:rgba(13,148,136,0.07);border-color:rg
             </select>
           </div>
         </div>
+        <div style="margin:6px 0">
+          <button class="btn btn-blue btn-sm" onclick="genKypAI()">✨ AIで指示事項・危険予知を生成</button>
+          <span id="kyp-ai-status" style="font-size:11px;color:var(--text3);margin-left:6px">工種・作業内容・天候を入力してから押してください</span>
+        </div>
         <div class="fg" style="margin-top:8px"><label>📋 指示事項（安全指示）</label>
           <textarea id="kyp-shiji" placeholder="この作業の安全指示事項（複数行OK）" style="min-height:50px"></textarea>
         </div>
@@ -4781,6 +4785,46 @@ function calcKypPoint(rid){
     el.style.color=pt>=12?'#dc2626':pt>=6?'#d97706':'#16a34a';
   }else{
     el.textContent='—';el.style.color='var(--text3)';
+  }
+}
+// KYパターン登録フォーム：工種・作業内容・天候からAIで指示事項・危険予知を生成
+async function genKypAI(){
+  const koushu=document.getElementById('kyp-koushu').value.trim();
+  const sagyou=document.getElementById('kyp-sagyou').value.trim();
+  const tenki=document.getElementById('kyp-tenki').value;
+  const statusEl=document.getElementById('kyp-ai-status');
+  if(!koushu||!sagyou){
+    if(statusEl){statusEl.textContent='工種と作業内容を入力してください';statusEl.style.color='var(--danger)';}
+    return;
+  }
+  const prompt=`建設現場の安全管理担当として、以下の作業のKY（危険予知）活動パターンを作成してください。
+工種:${koushu}
+作業内容:${sagyou}
+天候:${tenki}
+
+必ず以下のJSON形式のみで回答してください。他のテキストは一切含めないでください。
+{
+  "shiji": "安全指示事項を「1. 〜すること」の形式で5項目程度、改行区切りの1つの文字列で",
+  "kikens": [
+    {"kiken":"危険のポイント（〜なので）","risk":"想定されるリスク・災害（〜になる）","taisaku":"対策（〜する）","juu":"重篤度を1〜4の数値で（4:致命的 3:重大 2:中程度 1:軽微）","kaku":"発生確率を1〜4の数値で（4:確実 3:可能性大 2:可能性小 1:ほぼない）"}
+  ]
+}
+kikensは3〜5件程度にしてください。`;
+  try{
+    const raw=await callGeminiWithQuota(prompt,900,statusEl);
+    const text=raw.replace(/```json|```/g,'').trim();
+    let data;
+    try{ data=JSON.parse(text); }
+    catch(e){ throw new Error('AIの応答を解析できませんでした。もう一度お試しください'); }
+    document.getElementById('kyp-shiji').value=data.shiji||'';
+    const area=document.getElementById('kyp-kiken-rows');
+    area.innerHTML='';
+    (data.kikens||[]).forEach(k=>addKypKikenRow(k.kiken||'',k.risk||'',k.taisaku||'',k.juu||'',k.kaku||''));
+    if((data.kikens||[]).length===0) addKypKikenRow();
+    statusEl.textContent='✓ 生成しました。内容を確認して「このパターンを登録」を押してください';
+    statusEl.style.color='var(--accent2)';
+  }catch(e){
+    if(statusEl){statusEl.textContent='エラー: '+e.message;statusEl.style.color='var(--danger)';}
   }
 }
 function clearKypForm(){
