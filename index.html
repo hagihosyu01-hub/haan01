@@ -169,6 +169,14 @@ textarea.autogrow{overflow:hidden;}
 .info-item .ilabel{font-size:10px;color:var(--text3);}
 .info-item .ivalue{font-size:16px;font-weight:700;color:var(--text);}
 .master-table{width:100%;border-collapse:collapse;}
+/* 工種マスタ：資機材のチップに幅を取られ工種・種別・作業内容が狭くなりすぎないよう列幅を固定 */
+.koushu-table{table-layout:fixed;}
+.koushu-table th:nth-child(1),.koushu-table td:nth-child(1){width:12%;}
+.koushu-table th:nth-child(2),.koushu-table td:nth-child(2){width:12%;}
+.koushu-table th:nth-child(3),.koushu-table td:nth-child(3){width:22%;}
+.koushu-table th:nth-child(4),.koushu-table td:nth-child(4){width:46%;}
+.koushu-table th:nth-child(5),.koushu-table td:nth-child(5){width:8%;}
+.koushu-table td input[type=text]{min-width:0;}
 .master-table th{background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);}
 .master-table td{padding:7px 9px;border-bottom:1px solid rgba(58,66,85,0.5);font-size:12px;vertical-align:middle;}
 .master-table tr:hover td{background:rgba(255,255,255,0.02);}
@@ -1400,7 +1408,7 @@ body.light-theme .chips-sa span{background:rgba(13,148,136,0.07);border-color:rg
         <button class="btn btn-ghost btn-sm" onclick="clearKoushuFilter()">フィルタ解除</button>
       </div>
     </div>
-    <table class="master-table">
+    <table class="master-table koushu-table">
       <thead><tr><th>工種</th><th>種別</th><th>作業内容</th><th>資機材</th><th>操作</th></tr></thead>
       <tbody id="koushu-tbody"></tbody>
     </table>
